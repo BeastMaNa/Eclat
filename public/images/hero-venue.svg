@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1920" height="1080" viewBox="0 0 1920 1080">
+  <rect width="1920" height="1080" fill="#1E1B18"/>
+  <text x="50%" y="50%" font-family="Georgia,serif" font-size="24" fill="#8B8378" text-anchor="middle" dominant-baseline="middle">Hotel lobby with Éclat machine</text>
+  <text x="50%" y="calc(50% + 36px)" font-family="system-ui,sans-serif" font-size="14" fill="#8B8378" text-anchor="middle" dominant-baseline="middle" dy="36">Replace with real photography</text>
+</svg>

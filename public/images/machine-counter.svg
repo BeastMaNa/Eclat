@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 450" fill="none">
+  <rect width="600" height="450" fill="#14110F"/>
+  <!-- Counter unit body -->
+  <rect x="130" y="60" width="340" height="300" rx="8" fill="#1E1B18"/>
+  <rect x="130" y="60" width="340" height="300" rx="8" stroke="#C9A684" stroke-width="1" stroke-opacity="0.3"/>
+  <!-- Display panel -->
+  <rect x="155" y="85" width="290" height="180" rx="4" fill="#2A2520"/>
+  <rect x="155" y="85" width="290" height="180" rx="4" fill="#C9A684" fill-opacity="0.03"/>
+  <!-- Fragrance slots - 2×3 grid -->
+  <rect x="172" y="100" width="80" height="68" rx="3" fill="#C9A684" fill-opacity="0.08"/>
+  <rect x="262" y="100" width="80" height="68" rx="3" fill="#C9A684" fill-opacity="0.08"/>
+  <rect x="352" y="100" width="72" height="68" rx="3" fill="#C9A684" fill-opacity="0.08"/>
+  <rect x="172" y="178" width="80" height="68" rx="3" fill="#C9A684" fill-opacity="0.08"/>
+  <rect x="262" y="178" width="80" height="68" rx="3" fill="#C9A684" fill-opacity="0.08"/>
+  <rect x="352" y="178" width="72" height="68" rx="3" fill="#C9A684" fill-opacity="0.08"/>
+  <!-- Bottle silhouettes -->
+  <rect x="196" y="116" width="22" height="36" rx="2" fill="#C9A684" fill-opacity="0.28"/>
+  <rect x="286" y="116" width="22" height="36" rx="2" fill="#C9A684" fill-opacity="0.22"/>
+  <rect x="374" y="116" width="22" height="36" rx="2" fill="#C9A684" fill-opacity="0.22"/>
+  <rect x="196" y="194" width="22" height="36" rx="2" fill="#C9A684" fill-opacity="0.18"/>
+  <rect x="286" y="194" width="22" height="36" rx="2" fill="#C9A684" fill-opacity="0.18"/>
+  <rect x="374" y="194" width="22" height="36" rx="2" fill="#C9A684" fill-opacity="0.18"/>
+  <!-- Payment strip -->
+  <rect x="155" y="278" width="290" height="56" rx="4" fill="#C9A684" fill-opacity="0.06"/>
+  <rect x="155" y="278" width="290" height="56" rx="4" stroke="#C9A684" stroke-width="0.5" stroke-opacity="0.25"/>
+  <rect x="170" y="291" width="100" height="30" rx="2" fill="#C9A684" fill-opacity="0.12"/>
+  <circle cx="396" cy="306" r="16" fill="#C9A684" fill-opacity="0.15"/>
+  <!-- Logo -->
+  <text x="300" y="394" font-family="Georgia, serif" font-size="20" fill="#C9A684" fill-opacity="0.65" text-anchor="middle" letter-spacing="6">ÉCLAT</text>
+  <text x="300" y="412" font-family="Arial, sans-serif" font-size="8" fill="#C9A684" fill-opacity="0.35" text-anchor="middle" letter-spacing="3">COUNTER</text>
+  <!-- Accent line top -->
+  <line x1="278" y1="76" x2="322" y2="76" stroke="#C9A684" stroke-width="1" stroke-opacity="0.45"/>
+</svg>

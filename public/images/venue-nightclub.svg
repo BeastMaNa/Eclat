@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="1000" viewBox="0 0 800 1000">
+  <rect width="800" height="1000" fill="#1A1A1A"/>
+  <text x="50%" y="50%" font-family="Georgia,serif" font-size="24" fill="#8B8378" text-anchor="middle" dominant-baseline="middle">Upscale nightclub / bar</text>
+  <text x="50%" y="calc(50% + 36px)" font-family="system-ui,sans-serif" font-size="14" fill="#8B8378" text-anchor="middle" dominant-baseline="middle" dy="36">Replace with real photography</text>
+</svg>
