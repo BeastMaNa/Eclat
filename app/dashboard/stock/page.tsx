@@ -2,15 +2,22 @@ import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import { getDataSource } from "@/lib/dashboard";
 import type { StockItem, Machine } from "@/lib/dashboard";
+import { FRAGRANCES as CATALOG } from "@/content/catalog";
+import Image from "next/image";
+
+const CATALOG_MAP = Object.fromEntries(
+  CATALOG.map((f) => [`${f.house} ${f.name}`, f])
+);
 
 function CapacityBar({ item }: { item: StockItem }) {
   const pct = Math.round((item.quantity / item.capacity) * 100);
   const isLow = item.quantity <= item.lowStockThreshold;
   const isEmpty = item.quantity === 0;
+  const catalogEntry = CATALOG_MAP[item.fragrance];
 
   return (
     <div
-      className={`bg-white/70 border rounded-xl px-4 py-3 ${
+      className={`bg-white/70 border rounded-xl p-3 ${
         isEmpty
           ? "border-red-300 bg-red-50/50"
           : isLow
@@ -18,10 +25,23 @@ function CapacityBar({ item }: { item: StockItem }) {
           : "border-stone/10"
       }`}
     >
-      <div className="flex items-center justify-between mb-2">
-        <p className="font-sans text-sm text-ink font-medium truncate pr-2">
-          {item.fragrance}
-        </p>
+      {/* Bottle image */}
+      {catalogEntry?.image && (
+        <div className="relative w-full aspect-square mb-2 bg-white rounded-lg overflow-hidden">
+          <Image
+            src={catalogEntry.image}
+            alt={item.fragrance}
+            fill
+            className="object-contain p-2"
+            sizes="200px"
+          />
+        </div>
+      )}
+      <div className="flex items-start justify-between gap-1 mb-1.5">
+        <div className="min-w-0">
+          <p className="font-sans text-[11px] text-stone/60 truncate">{catalogEntry?.house ?? ""}</p>
+          <p className="font-sans text-xs text-ink font-medium leading-snug truncate">{catalogEntry?.name ?? item.fragrance}</p>
+        </div>
         <span
           className={`font-sans text-xs font-semibold shrink-0 ${
             isEmpty ? "text-red-600" : isLow ? "text-amber-600" : "text-stone"
@@ -72,7 +92,7 @@ function MachineCard({
           </span>
         )}
       </div>
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2.5">
+      <div className="grid grid-cols-3 sm:grid-cols-5 gap-2.5">
         {stock.map((item) => (
           <CapacityBar key={`${item.machineId}-${item.slot}`} item={item} />
         ))}

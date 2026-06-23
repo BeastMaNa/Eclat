@@ -8,19 +8,22 @@ import type {
   SalesTimeSeries,
   TopFragrance,
 } from "./types";
+import { FRAGRANCES as CATALOG } from "@/content/catalog";
 
 // ─── Static seed data ─────────────────────────────────────────────────────────
 
-const FRAGRANCES = [
-  "Oud & Amber",
-  "White Musk",
-  "Bergamot Noir",
-  "Rose Absolute",
-  "Vetiver Cedar",
-  "Jasmine & Sandalwood",
-  "Black Pepper & Iris",
-  "Neroli Luxe",
-];
+// All catalog fragrances as "House Name" display strings
+const ALL_FRAGRANCES = CATALOG.map((f) => `${f.house} ${f.name}`);
+
+// Each machine gets exactly 5 fragrances — assign deterministic subsets per machine
+const MACHINE_FRAGRANCES: Record<string, string[]> = {
+  "mach-001": ALL_FRAGRANCES.slice(0, 5),
+  "mach-002": ALL_FRAGRANCES.slice(1, 6),
+  "mach-003": ALL_FRAGRANCES.slice(2, 7),
+  "mach-004": ALL_FRAGRANCES.slice(3, 8),
+  "mach-005": ALL_FRAGRANCES.slice(0, 5),
+  "mach-006": ALL_FRAGRANCES.slice(1, 6),
+};
 
 const PAYMENT_TYPES: Sale["paymentType"][] = ["card", "apple_pay", "google_pay"];
 
@@ -66,21 +69,21 @@ function generateSales(venueId: string, daysBack = 60): Sale[] {
 
   for (let day = daysBack; day >= 0; day--) {
     const baseDate = now - day * 86_400_000;
-    // 3–14 sales per day per machine, more on weekends
     const date = new Date(baseDate);
     const isWeekend = date.getDay() === 0 || date.getDay() === 6;
     const perMachine = isWeekend ? Math.floor(rng() * 8) + 6 : Math.floor(rng() * 6) + 3;
 
     for (const machine of machines) {
+      const fragrances = MACHINE_FRAGRANCES[machine.id] ?? ALL_FRAGRANCES.slice(0, 5);
       for (let i = 0; i < perMachine; i++) {
-        const offsetMs = Math.floor(rng() * 72_000_000); // within 20h window
+        const offsetMs = Math.floor(rng() * 72_000_000);
         sales.push({
           id: `sale-${venueId}-${idCounter++}`,
           timestamp: new Date(baseDate + offsetMs),
-          fragrance: pick(FRAGRANCES, rng),
+          fragrance: pick(fragrances, rng),
           machineId: machine.id,
           venueId,
-          amountGbp: +(5 + rng() * 10).toFixed(2), // £5–£15
+          amountGbp: +(5 + rng() * 10).toFixed(2),
           paymentType: pick(PAYMENT_TYPES, rng),
         });
       }
@@ -98,14 +101,14 @@ function generateStock(venueId: string): StockItem[] {
   const items: StockItem[] = [];
 
   for (const machine of machines) {
-    const slots = machine.model === "Counter" ? 6 : machine.model === "Slim" ? 10 : 12;
-    for (let slot = 1; slot <= slots; slot++) {
+    const fragrances = MACHINE_FRAGRANCES[machine.id] ?? ALL_FRAGRANCES.slice(0, 5);
+    for (let slot = 1; slot <= 5; slot++) {
       const capacity = 20;
       const quantity = Math.floor(rng() * capacity);
       items.push({
         machineId: machine.id,
         slot,
-        fragrance: FRAGRANCES[(slot - 1) % FRAGRANCES.length],
+        fragrance: fragrances[slot - 1],
         quantity,
         capacity,
         lowStockThreshold: 4,
