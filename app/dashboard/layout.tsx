@@ -17,7 +17,8 @@ export default async function DashboardLayout({
         userEmail={session.user.email}
       />
       <div className="flex-1 flex flex-col min-w-0">
-        <main className="flex-1 p-6 lg:p-8">{children}</main>
+        {/* pt-14 on mobile = clear the fixed top bar; pb-20 = clear bottom tab bar */}
+        <main className="flex-1 p-4 pt-[calc(3.5rem+1rem)] pb-24 lg:pt-8 lg:pb-8 lg:p-8">{children}</main>
       </div>
     </div>
   );

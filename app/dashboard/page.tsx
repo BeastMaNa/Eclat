@@ -21,12 +21,18 @@ async function OverviewContent({ venueId, days }: { venueId: string; days: numbe
   const dateRange = { from, to };
   const query = { venueId, dateRange };
 
-  const [kpis, timeSeries, topFragrances, lowStock] = await Promise.all([
+  const [kpis, timeSeries, topFragrances, allStock] = await Promise.all([
     ds.getKpis(query),
     ds.getSalesTimeSeries(query),
     ds.getTopFragrances(query, 5),
-    ds.getLowStockAlerts(venueId),
+    ds.getStock(venueId),
   ]);
+
+  const totalSlots = allStock.length;
+  const emptySlots = allStock.filter((s) => s.quantity === 0).length;
+  const lowSlots = allStock.filter((s) => s.quantity > 0 && s.quantity <= s.lowStockThreshold).length;
+  const adequateSlots = totalSlots - emptySlots - lowSlots;
+  const lowStock = allStock.filter((s) => s.quantity <= s.lowStockThreshold);
 
   return (
     <>
@@ -37,6 +43,31 @@ async function OverviewContent({ venueId, days }: { venueId: string; days: numbe
         <KpiCard label="Avg / day" value={formatGbp(kpis.avgRevenuePerDay)} sub="revenue" />
         <KpiCard label="Units / day" value={kpis.avgUnitsPerDay.toFixed(1)} sub="avg daily" />
       </div>
+
+      {/* Earnings highlight */}
+      {(() => {
+        const commissionPct = 20; // matches VENUE_META — replace with DB value in production
+        const earningsGbp = kpis.totalRevenueGbp * (commissionPct / 100);
+        return (
+          <div className="bg-accent/10 border border-accent/25 rounded-xl px-5 py-4 mb-6 flex items-center justify-between gap-4 flex-wrap">
+            <div>
+              <p className="font-sans text-xs tracking-[0.12em] uppercase text-accent/70 mb-0.5">Your earnings</p>
+              <p className="font-serif text-3xl font-bold text-ink leading-none">
+                {new Intl.NumberFormat("en-GB", { style: "currency", currency: "GBP", maximumFractionDigits: 0 }).format(earningsGbp)}
+              </p>
+              <p className="font-sans text-xs text-stone mt-1.5">
+                {commissionPct}% commission on{" "}
+                {new Intl.NumberFormat("en-GB", { style: "currency", currency: "GBP", maximumFractionDigits: 0 }).format(kpis.totalRevenueGbp)}{" "}
+                machine revenue · last {days} days
+              </p>
+            </div>
+            <div className="text-right">
+              <p className="font-sans text-xs text-stone mb-0.5">Next payout</p>
+              <p className="font-sans text-sm font-semibold text-ink">15 Jul 2026</p>
+            </div>
+          </div>
+        );
+      })()}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
         {/* Sales chart */}
@@ -70,6 +101,30 @@ async function OverviewContent({ venueId, days }: { venueId: string; days: numbe
               </li>
             ))}
           </ol>
+        </div>
+      </div>
+
+      {/* Stock health */}
+      <div className="bg-white/60 border border-stone/10 rounded-xl p-5 mb-6">
+        <h2 className="font-sans text-xs tracking-[0.12em] uppercase text-stone mb-4">Stock health</h2>
+        <div className="flex gap-2 mb-3 h-2 rounded-full overflow-hidden">
+          <div className="bg-accent rounded-full transition-all" style={{ width: `${(adequateSlots / totalSlots) * 100}%` }} />
+          <div className="bg-amber-400 rounded-full transition-all" style={{ width: `${(lowSlots / totalSlots) * 100}%` }} />
+          <div className="bg-red-400 rounded-full transition-all" style={{ width: `${(emptySlots / totalSlots) * 100}%` }} />
+        </div>
+        <div className="flex gap-6 flex-wrap">
+          {[
+            { color: "bg-accent", label: "Adequate", count: adequateSlots },
+            { color: "bg-amber-400", label: "Low", count: lowSlots },
+            { color: "bg-red-400", label: "Empty", count: emptySlots },
+          ].map(({ color, label, count }) => (
+            <div key={label} className="flex items-center gap-2">
+              <span className={`w-2 h-2 rounded-full shrink-0 ${color}`} aria-hidden="true" />
+              <span className="font-sans text-xs text-stone">{label}</span>
+              <span className="font-sans text-sm font-semibold text-ink">{count}</span>
+              <span className="font-sans text-xs text-stone/50">/ {totalSlots}</span>
+            </div>
+          ))}
         </div>
       </div>
 

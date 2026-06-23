@@ -113,8 +113,32 @@ export function SalesClient({ sales, fragranceOptions, days }: SalesClientProps)
         </button>
       </div>
 
-      {/* Table */}
-      <div className="bg-white/70 border border-stone/10 rounded-xl overflow-hidden">
+      {/* Mobile card list */}
+      <div className="sm:hidden space-y-2">
+        {filtered.length === 0 && (
+          <p className="py-10 text-center font-sans text-sm text-stone">No records for the selected filters.</p>
+        )}
+        {filtered.map((sale) => (
+          <div key={sale.id} className="bg-white/70 border border-stone/10 rounded-xl px-4 py-3 flex items-center justify-between gap-3">
+            <div className="min-w-0">
+              <p className="font-sans text-sm font-medium text-ink truncate">{sale.fragrance}</p>
+              <p className="font-sans text-xs text-stone mt-0.5">
+                {new Date(sale.timestamp).toLocaleDateString("en-GB", { day: "2-digit", month: "short" })}
+                {" · "}
+                {new Date(sale.timestamp).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}
+                {" · "}{sale.machineId}
+              </p>
+            </div>
+            <div className="text-right shrink-0">
+              <p className="font-sans text-sm font-semibold text-ink">{formatGbp(sale.amountGbp)}</p>
+              <p className="font-sans text-xs text-stone capitalize mt-0.5">{sale.paymentType.replace("_", " ")}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Desktop table */}
+      <div className="hidden sm:block bg-white/70 border border-stone/10 rounded-xl overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full" aria-label="Sales records">
             <thead className="border-b border-stone/10">
