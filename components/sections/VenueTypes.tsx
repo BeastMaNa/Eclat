@@ -9,7 +9,7 @@ const VENUES = [
     name: "Nightclubs",
     description:
       "Cloakrooms, pre-club prep rooms — the moment guests want to feel their best. Deansgate and the Northern Quarter know it.",
-    image: "/images/venue-nightclub.png",
+    image: "/images/venue-nightclub.jpg",
     alt: "Packed nightclub dance floor with warm neon lighting",
     primary: true,
   },
@@ -17,7 +17,7 @@ const VENUES = [
     name: "Bars & Cocktail Bars",
     description:
       "Before the first round and between the last two — premium scent drives extra spend and repeat visits.",
-    image: "/images/venue-bar.png",
+    image: "/images/venue-bar.jpg",
     alt: "Bartender crafting cocktails at a copper-lit bar",
     primary: true,
   },
@@ -56,6 +56,7 @@ export function VenueTypes() {
                   src={venue.image}
                   alt={venue.alt}
                   fill
+                  priority={i === 0}
                   className="object-cover transition-transform duration-[700ms] ease-luxe group-hover:scale-105"
                   sizes="(min-width: 640px) 50vw, 100vw"
                 />

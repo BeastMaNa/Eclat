@@ -13,6 +13,7 @@ export function Hero() {
           muted
           loop
           playsInline
+          preload="metadata"
           className="absolute inset-0 w-full h-full object-cover opacity-40 motion-reduce:hidden"
         />
         <div className="absolute inset-0 bg-gradient-to-r from-ink/85 via-ink/55 to-transparent" />
