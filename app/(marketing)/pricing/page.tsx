@@ -6,6 +6,7 @@ import { SectionLabel } from "@/components/ui/SectionLabel";
 import { Button } from "@/components/ui/Button";
 import { AnimateOnScroll } from "@/components/ui/AnimateOnScroll";
 import { CTASection } from "@/components/sections/CTASection";
+import { RoiCalculator } from "./RoiCalculator";
 
 export const metadata: Metadata = {
   title: "Partnership Models",
@@ -116,6 +117,8 @@ export default function PricingPage() {
           </AnimateOnScroll>
         </div>
       </section>
+
+      <RoiCalculator />
 
       {/* Pricing FAQs */}
       <section className="bg-ink py-20">
