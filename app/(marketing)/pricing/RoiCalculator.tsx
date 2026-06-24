@@ -92,10 +92,7 @@ export function RoiCalculatorPanel() {
 
   return (
     <div className="flex flex-col flex-1 gap-4">
-      <div>
-        <p className="font-sans text-xs tracking-[0.2em] uppercase text-accent mb-2">Earnings calculator</p>
-        <h2 className="font-serif text-2xl font-bold text-ink">See what you could earn</h2>
-      </div>
+      <p className="font-sans text-xs tracking-[0.2em] uppercase text-accent">Earning potential</p>
 
       {/* Controls */}
       <div className="bg-white/70 border border-stone/10 rounded-2xl p-5 space-y-6">
