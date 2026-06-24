@@ -44,26 +44,23 @@ export default function PricingPage() {
       {/* Revenue Share card + ROE calculator side by side */}
       <section className="bg-bone pb-20 lg:pb-28">
         <div className="max-w-7xl mx-auto px-6 lg:px-8">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-14 items-start">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-14">
 
             {/* Left: pricing card */}
-            <AnimateOnScroll>
-              <div className="rounded-3xl overflow-hidden bg-accent shadow-2xl">
-                {/* Badge */}
+            <AnimateOnScroll className="flex flex-col">
+              <div className="flex-1 rounded-3xl overflow-hidden bg-accent shadow-2xl flex flex-col">
+                {/* Banner — "Revenue Share" replaces "Most Popular" */}
                 <div className="bg-ink px-6 py-2.5 text-center">
                   <span className="font-sans text-xs tracking-[0.15em] uppercase text-bone">
-                    {revenueShare.badge}
+                    Revenue Share
                   </span>
                 </div>
 
-                <div className="px-8 pt-10 pb-12 lg:px-10 lg:pt-12 lg:pb-14 text-center">
-                  <h2 className="font-serif text-3xl font-bold text-bone uppercase tracking-wide">
-                    {revenueShare.name}
-                  </h2>
-                  <p className="mt-2 font-sans text-sm text-ink/70">
+                <div className="px-8 pt-10 pb-12 lg:px-10 lg:pt-12 lg:pb-14 text-center flex flex-col flex-1">
+                  <h2 className="font-serif text-3xl font-bold text-ink">
                     {revenueShare.headline}
-                  </p>
-                  <p className="mt-5 font-sans text-sm leading-relaxed text-ink/70 max-w-md mx-auto">
+                  </h2>
+                  <p className="mt-4 font-sans text-sm leading-relaxed text-ink/70 max-w-md mx-auto">
                     {revenueShare.description}
                   </p>
 
@@ -80,8 +77,8 @@ export default function PricingPage() {
                     </p>
                   </div>
 
-                  {/* Features */}
-                  <ul className="mt-8 grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-3 text-left">
+                  {/* Features — flex-1 so this area grows to fill remaining height */}
+                  <ul className="mt-8 grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-3 text-left flex-1">
                     {revenueShare.features
                       .filter((f) => f.included)
                       .map((f) => (
@@ -98,7 +95,7 @@ export default function PricingPage() {
                       ))}
                   </ul>
 
-                  {/* CTA */}
+                  {/* CTA pinned to bottom */}
                   <div className="mt-10">
                     <Button asChild variant="primary" size="lg" className="w-full sm:w-auto">
                       <Link href="/contact">
@@ -118,7 +115,7 @@ export default function PricingPage() {
             </AnimateOnScroll>
 
             {/* Right: ROE calculator */}
-            <AnimateOnScroll delay={80}>
+            <AnimateOnScroll delay={80} className="flex flex-col">
               <RoiCalculatorPanel />
             </AnimateOnScroll>
           </div>

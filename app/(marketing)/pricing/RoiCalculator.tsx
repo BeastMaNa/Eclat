@@ -91,7 +91,7 @@ export function RoiCalculatorPanel() {
   const venueAnnual     = venueMonthly * 12;
 
   return (
-    <div className="space-y-4">
+    <div className="flex flex-col flex-1 gap-4">
       <div>
         <p className="font-sans text-xs tracking-[0.2em] uppercase text-accent mb-2">Earnings calculator</p>
         <h2 className="font-serif text-2xl font-bold text-ink">See what you could earn</h2>
@@ -200,7 +200,7 @@ export function RoiCalculatorPanel() {
         </div>
       </div>
 
-      <p className="font-sans text-[11px] text-stone/60 leading-relaxed">
+      <p className="mt-auto font-sans text-[11px] text-stone/60 leading-relaxed">
         Estimates only. Actual figures depend on venue type, location, and agreed commission rate confirmed at site survey.
       </p>
     </div>
