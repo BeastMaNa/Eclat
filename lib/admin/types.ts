@@ -146,3 +146,75 @@ export interface InquiryFilter {
   status?: InquiryStatus;
   assignedTo?: string;
 }
+
+// ─── Payouts ───────────────────────────────────────────────────────────────────
+
+export type PayoutStatus = "due" | "paid" | "na";
+
+export interface PayoutRecord {
+  venueId: string;
+  venueName: string;
+  area: string;
+  contactName: string;
+  contactEmail: string;
+  partnershipModel: PartnershipModel;
+  commissionPct: number;
+  grossSalesGbp: number;
+  partnerShareGbp: number;
+  eclatShareGbp: number;
+  status: PayoutStatus;
+  paidDate?: string;
+  paidReference?: string;
+}
+
+// ─── Profitability ─────────────────────────────────────────────────────────────
+
+export interface NetProfitSummary {
+  venueId: string;
+  venueName: string;
+  area: string;
+  type: string;
+  machineCount: number;
+  grossRevenueGbp: number;
+  cogsGbp: number;
+  commissionGbp: number;
+  servicingGbp: number;
+  netProfitGbp: number;
+  marginPct: number;
+}
+
+export interface ProfitTimeSeries {
+  date: string;
+  revenueGbp: number;
+  netProfitGbp: number;
+}
+
+// ─── Restock ───────────────────────────────────────────────────────────────────
+
+export interface RestockItem {
+  machineId: string;
+  venueId: string;
+  venueName: string;
+  area: string;
+  lat: number;
+  lng: number;
+  slot: number;
+  fragrance: string;
+  currentQty: number;
+  capacity: number;
+  toLoad: number;
+}
+
+// ─── Fragrances ────────────────────────────────────────────────────────────────
+
+export interface FragranceAnalytic {
+  fragrance: string;
+  tier: "standard" | "premium";
+  totalUnits: number;
+  totalRevenueGbp: number;
+  avgPriceGbp: number;
+  grossMarginGbp: number;
+  marginPct: number;
+  byVenueType: Record<string, { units: number; revenueGbp: number }>;
+  isSlowMover: boolean;
+}

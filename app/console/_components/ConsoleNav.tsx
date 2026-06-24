@@ -5,19 +5,24 @@ import { usePathname } from "next/navigation";
 import {
   LayoutDashboard, Map, Building2, TrendingUp,
   MessageSquare, Wrench, Package, LogOut, Menu, X,
+  Banknote, BarChart2, Truck, Droplets,
 } from "lucide-react";
 import { signOut } from "next-auth/react";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
 
 const NAV = [
-  { href: "/console",              label: "Overview",    icon: LayoutDashboard, exact: true },
-  { href: "/console/map",          label: "Map",         icon: Map,             exact: false },
-  { href: "/console/venues",       label: "Venues",      icon: Building2,       exact: false },
-  { href: "/console/sales",        label: "Sales",       icon: TrendingUp,      exact: false },
-  { href: "/console/inquiries",    label: "Inquiries",   icon: MessageSquare,   exact: false },
-  { href: "/console/maintenance",  label: "Maintenance", icon: Wrench,          exact: false },
-  { href: "/console/stock",        label: "Stock",       icon: Package,         exact: false },
+  { href: "/console",                label: "Overview",       icon: LayoutDashboard, exact: true },
+  { href: "/console/map",            label: "Map",            icon: Map,             exact: false },
+  { href: "/console/venues",         label: "Venues",         icon: Building2,       exact: false },
+  { href: "/console/sales",          label: "Sales",          icon: TrendingUp,      exact: false },
+  { href: "/console/payouts",        label: "Payouts",        icon: Banknote,        exact: false },
+  { href: "/console/profitability",  label: "Profitability",  icon: BarChart2,       exact: false },
+  { href: "/console/inquiries",      label: "Inquiries",      icon: MessageSquare,   exact: false },
+  { href: "/console/maintenance",    label: "Maintenance",    icon: Wrench,          exact: false },
+  { href: "/console/stock",          label: "Stock",          icon: Package,         exact: false },
+  { href: "/console/restock",        label: "Restock",        icon: Truck,           exact: false },
+  { href: "/console/fragrances",     label: "Fragrances",     icon: Droplets,        exact: false },
 ];
 
 interface ConsoleNavProps {
@@ -54,7 +59,8 @@ export function ConsoleNav({ ownerName }: ConsoleNavProps) {
   );
 
   return (
-    <>
+    // print:hidden — the statement page prints without any chrome
+    <div className="print:hidden contents">
       {/* ── Desktop sidebar ───────────────────────────────────────────── */}
       <aside className="hidden lg:flex flex-col w-52 shrink-0 bg-ink border-r border-bone/10 min-h-screen">
         <div className="px-4 pt-6 pb-4 border-b border-bone/10">
@@ -66,7 +72,7 @@ export function ConsoleNav({ ownerName }: ConsoleNavProps) {
           </p>
         </div>
 
-        <nav className="flex-1 px-3 py-4 space-y-0.5" aria-label="Console navigation">
+        <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto" aria-label="Console navigation">
           <NavLinks />
         </nav>
 
@@ -114,7 +120,7 @@ export function ConsoleNav({ ownerName }: ConsoleNavProps) {
                 <X size={16} />
               </button>
             </div>
-            <nav className="flex-1 px-3 py-4 space-y-0.5" aria-label="Console navigation">
+            <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto" aria-label="Console navigation">
               <NavLinks onClick={() => setMobileOpen(false)} />
             </nav>
             <div className="px-3 pb-5 border-t border-bone/10 pt-4">
@@ -130,6 +136,6 @@ export function ConsoleNav({ ownerName }: ConsoleNavProps) {
           </div>
         </div>
       )}
-    </>
+    </div>
   );
 }

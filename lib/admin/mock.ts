@@ -20,7 +20,17 @@ import type {
   MaintenanceFilter,
   InquiryFilter,
   PaymentType,
+  PayoutRecord,
+  NetProfitSummary,
+  ProfitTimeSeries,
+  RestockItem,
+  FragranceAnalytic,
 } from "./types";
+import {
+  WHOLESALE_COST_PER_SALE_GBP,
+  SERVICING_COST_PER_MACHINE_MONTH_GBP,
+  SLOW_MOVER_THRESHOLD_UNITS_PER_30D,
+} from "./costs";
 import { FRAGRANCES as CATALOG } from "@/content/catalog";
 
 const ALL_FRAGRANCES = CATALOG.map((f) => `${f.house} ${f.name}`);
@@ -615,6 +625,8 @@ export class MockAdminDataSource implements AdminDataSource {
   // Mutable in-memory state for write operations
   private inquiries: Inquiry[] = INQUIRIES_SEED.map((i) => ({ ...i, notes: [...i.notes] }));
   private tickets: MaintenanceTicket[] = MAINTENANCE_SEED.map((t) => ({ ...t }));
+  private payoutStates = new Map<string, { paidDate: string; paidReference: string }>();
+  private restockedVenueIds = new Set<string>();
 
   private getVenueSales(venueId: string): AdminSale[] {
     if (!this.salesCache.has(venueId)) {
@@ -782,6 +794,232 @@ export class MockAdminDataSource implements AdminDataSource {
   }
 
   async getEstateStock(): Promise<AdminStockItem[]> {
-    return VENUES.flatMap((v) => generateStock(v));
+    return VENUES.flatMap((v) => {
+      const items = generateStock(v);
+      if (this.restockedVenueIds.has(v.id)) {
+        return items.map((i) => ({ ...i, quantity: i.capacity }));
+      }
+      return items;
+    });
+  }
+
+  // ── Payouts ─────────────────────────────────────────────────────────────────
+
+  async getPayoutRecords(dateRange: DateRange): Promise<PayoutRecord[]> {
+    const sales = this.getAllSales().filter(
+      (s) => s.timestamp >= dateRange.from && s.timestamp <= dateRange.to
+    );
+    return VENUES.map((v) => {
+      const vSales = sales.filter((s) => s.venueId === v.id);
+      const grossSales = vSales.reduce((sum, s) => sum + s.amountGbp, 0);
+
+      if (v.partnershipModel !== "revenue-share") {
+        return {
+          venueId: v.id,
+          venueName: v.name,
+          area: v.area,
+          contactName: v.contactName,
+          contactEmail: v.contactEmail,
+          partnershipModel: v.partnershipModel,
+          commissionPct: 0,
+          grossSalesGbp: +grossSales.toFixed(2),
+          partnerShareGbp: 0,
+          eclatShareGbp: +grossSales.toFixed(2),
+          status: "na" as const,
+        };
+      }
+
+      const partnerShare = grossSales * (v.commissionPct / 100);
+      const eclatShare = grossSales - partnerShare;
+      const state = this.payoutStates.get(v.id);
+
+      return {
+        venueId: v.id,
+        venueName: v.name,
+        area: v.area,
+        contactName: v.contactName,
+        contactEmail: v.contactEmail,
+        partnershipModel: v.partnershipModel,
+        commissionPct: v.commissionPct,
+        grossSalesGbp: +grossSales.toFixed(2),
+        partnerShareGbp: +partnerShare.toFixed(2),
+        eclatShareGbp: +eclatShare.toFixed(2),
+        status: state ? ("paid" as const) : grossSales > 0 ? ("due" as const) : ("na" as const),
+        paidDate: state?.paidDate,
+        paidReference: state?.paidReference,
+      };
+    });
+  }
+
+  // REAL API LATER: PATCH /payouts/:venueId { paidDate, reference }
+  async markPayoutPaid(venueId: string, paidDate: string, reference: string): Promise<void> {
+    this.payoutStates.set(venueId, { paidDate, paidReference: reference });
+  }
+
+  // ── Profitability ────────────────────────────────────────────────────────────
+
+  async getNetProfitability(dateRange: DateRange): Promise<NetProfitSummary[]> {
+    const sales = this.getAllSales().filter(
+      (s) => s.timestamp >= dateRange.from && s.timestamp <= dateRange.to
+    );
+    const days = Math.max(1, (dateRange.to.getTime() - dateRange.from.getTime()) / 86_400_000);
+
+    return VENUES.filter((v) => {
+      // Only include venues with at least one installed machine
+      return MACHINES.some((m) => m.venueId === v.id && m.installDate !== "—");
+    }).map((v) => {
+      const vSales = sales.filter((s) => s.venueId === v.id);
+      const grossRevenue = vSales.reduce((s, x) => s + x.amountGbp, 0);
+      const units = vSales.length;
+      const cogs = units * WHOLESALE_COST_PER_SALE_GBP;
+      const commission =
+        v.partnershipModel === "revenue-share"
+          ? grossRevenue * (v.commissionPct / 100)
+          : 0;
+      const deployedMachines = MACHINES.filter(
+        (m) => m.venueId === v.id && m.installDate !== "—"
+      ).length;
+      const servicing =
+        deployedMachines * SERVICING_COST_PER_MACHINE_MONTH_GBP * (days / 30);
+      const netProfit = grossRevenue - cogs - commission - servicing;
+      const marginPct = grossRevenue > 0 ? (netProfit / grossRevenue) * 100 : -100;
+
+      return {
+        venueId: v.id,
+        venueName: v.name,
+        area: v.area,
+        type: v.type,
+        machineCount: deployedMachines,
+        grossRevenueGbp: +grossRevenue.toFixed(2),
+        cogsGbp: +cogs.toFixed(2),
+        commissionGbp: +commission.toFixed(2),
+        servicingGbp: +servicing.toFixed(2),
+        netProfitGbp: +netProfit.toFixed(2),
+        marginPct: +marginPct.toFixed(1),
+      };
+    });
+  }
+
+  async getEstateProfitTimeSeries(dateRange: DateRange): Promise<ProfitTimeSeries[]> {
+    const allSales = this.getAllSales().filter(
+      (s) => s.timestamp >= dateRange.from && s.timestamp <= dateRange.to
+    );
+
+    // Weighted avg commission rate across revenue-share venues
+    const totalRev = allSales.reduce((s, x) => s + x.amountGbp, 0);
+    const totalComm = allSales.reduce((s, x) => {
+      const v = VENUES.find((v) => v.id === x.venueId);
+      return s + (v?.partnershipModel === "revenue-share" ? x.amountGbp * (v.commissionPct / 100) : 0);
+    }, 0);
+    const avgCommRate = totalRev > 0 ? totalComm / totalRev : 0;
+
+    const deployedMachines = MACHINES.filter(
+      (m) => m.installDate !== "—" && VENUES.find((v) => v.id === m.venueId)?.status !== "install-pending"
+    ).length;
+    const dailyServicing = (deployedMachines * SERVICING_COST_PER_MACHINE_MONTH_GBP) / 30;
+
+    const byDay = new Map<string, { rev: number; units: number }>();
+    const cur = new Date(dateRange.from);
+    cur.setHours(0, 0, 0, 0);
+    const end = new Date(dateRange.to);
+    end.setHours(23, 59, 59, 999);
+    while (cur <= end) {
+      byDay.set(cur.toISOString().slice(0, 10), { rev: 0, units: 0 });
+      cur.setDate(cur.getDate() + 1);
+    }
+    for (const s of allSales) {
+      const key = s.timestamp.toISOString().slice(0, 10);
+      const e = byDay.get(key);
+      if (e) { e.rev += s.amountGbp; e.units += 1; }
+    }
+
+    return Array.from(byDay.entries())
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([date, { rev, units }]) => {
+        const cogs = units * WHOLESALE_COST_PER_SALE_GBP;
+        const comm = rev * avgCommRate;
+        const netProfit = rev - cogs - comm - dailyServicing;
+        return { date, revenueGbp: +rev.toFixed(2), netProfitGbp: +netProfit.toFixed(2) };
+      });
+  }
+
+  // ── Restock ──────────────────────────────────────────────────────────────────
+
+  async getRestockItems(): Promise<RestockItem[]> {
+    const allStock = await this.getEstateStock();
+    const venueMap = new Map(VENUES.map((v) => [v.id, v]));
+    return allStock
+      .filter((s) => s.quantity <= s.lowStockThreshold)
+      .map((s) => {
+        const venue = venueMap.get(s.venueId)!;
+        return {
+          machineId: s.machineId,
+          venueId: s.venueId,
+          venueName: s.venueName,
+          area: venue.area,
+          lat: venue.lat,
+          lng: venue.lng,
+          slot: s.slot,
+          fragrance: s.fragrance,
+          currentQty: s.quantity,
+          capacity: s.capacity,
+          toLoad: s.capacity - s.quantity,
+        };
+      });
+  }
+
+  // REAL API LATER: POST /venues/:venueId/restock — resets machine stock to full capacity
+  async markVenueRestocked(venueId: string): Promise<void> {
+    this.restockedVenueIds.add(venueId);
+  }
+
+  // ── Fragrance analytics ──────────────────────────────────────────────────────
+
+  async getFragranceAnalytics(dateRange: DateRange): Promise<FragranceAnalytic[]> {
+    const sales = this.getAllSales().filter(
+      (s) => s.timestamp >= dateRange.from && s.timestamp <= dateRange.to
+    );
+    const venueMap = new Map(VENUES.map((v) => [v.id, v]));
+    const days = Math.max(1, (dateRange.to.getTime() - dateRange.from.getTime()) / 86_400_000);
+    const slowThreshold = SLOW_MOVER_THRESHOLD_UNITS_PER_30D * (days / 30);
+
+    const map = new Map<string, { units: number; rev: number; byType: Record<string, { units: number; rev: number }> }>();
+    for (const s of sales) {
+      const venue = venueMap.get(s.venueId);
+      const vType = venue?.type ?? "other";
+      const e = map.get(s.fragrance) ?? { units: 0, rev: 0, byType: {} };
+      e.units += 1;
+      e.rev += s.amountGbp;
+      const t = e.byType[vType] ?? { units: 0, rev: 0 };
+      t.units += 1;
+      t.rev += s.amountGbp;
+      e.byType[vType] = t;
+      map.set(s.fragrance, e);
+    }
+
+    return Array.from(map.entries())
+      .map(([fragrance, data]) => {
+        const avgPrice = data.units > 0 ? data.rev / data.units : 0;
+        const tier: "standard" | "premium" = avgPrice >= 2.5 ? "premium" : "standard";
+        const grossMargin = data.rev - data.units * WHOLESALE_COST_PER_SALE_GBP;
+        const marginPct = data.rev > 0 ? (grossMargin / data.rev) * 100 : 0;
+        return {
+          fragrance,
+          tier,
+          totalUnits: data.units,
+          totalRevenueGbp: +data.rev.toFixed(2),
+          avgPriceGbp: +avgPrice.toFixed(2),
+          grossMarginGbp: +grossMargin.toFixed(2),
+          marginPct: +marginPct.toFixed(1),
+          byVenueType: Object.fromEntries(
+            Object.entries(data.byType).map(([k, v]) => [
+              k,
+              { units: v.units, revenueGbp: +v.rev.toFixed(2) },
+            ])
+          ),
+          isSlowMover: data.units < slowThreshold,
+        };
+      })
+      .sort((a, b) => b.totalUnits - a.totalUnits);
   }
 }

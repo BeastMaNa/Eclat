@@ -15,6 +15,11 @@ import type {
   EstateSalesQuery,
   MaintenanceFilter,
   InquiryFilter,
+  PayoutRecord,
+  NetProfitSummary,
+  ProfitTimeSeries,
+  RestockItem,
+  FragranceAnalytic,
 } from "./types";
 
 // ─── AdminDataSource interface ────────────────────────────────────────────────
@@ -63,4 +68,21 @@ export interface AdminDataSource {
 
   // ── Stock ─────────────────────────────────────────────────────────────────
   getEstateStock(): Promise<AdminStockItem[]>;
+
+  // ── Payouts ───────────────────────────────────────────────────────────────
+  getPayoutRecords(dateRange: DateRange): Promise<PayoutRecord[]>;
+  /** REAL API LATER: PATCH /payouts/:venueId { paidDate, reference } */
+  markPayoutPaid(venueId: string, paidDate: string, reference: string): Promise<void>;
+
+  // ── Profitability ─────────────────────────────────────────────────────────
+  getNetProfitability(dateRange: DateRange): Promise<NetProfitSummary[]>;
+  getEstateProfitTimeSeries(dateRange: DateRange): Promise<ProfitTimeSeries[]>;
+
+  // ── Restock planner ───────────────────────────────────────────────────────
+  getRestockItems(): Promise<RestockItem[]>;
+  /** REAL API LATER: POST /venues/:venueId/restock — resets stock to full capacity */
+  markVenueRestocked(venueId: string): Promise<void>;
+
+  // ── Fragrance analytics ───────────────────────────────────────────────────
+  getFragranceAnalytics(dateRange: DateRange): Promise<FragranceAnalytic[]>;
 }
