@@ -6,7 +6,7 @@ import { SectionLabel } from "@/components/ui/SectionLabel";
 import { Button } from "@/components/ui/Button";
 import { AnimateOnScroll } from "@/components/ui/AnimateOnScroll";
 import { CTASection } from "@/components/sections/CTASection";
-import { RoiCalculator } from "./RoiCalculator";
+import { RoiCalculatorPanel } from "./RoiCalculator";
 
 export const metadata: Metadata = {
   title: "Partnership Models",
@@ -41,84 +41,89 @@ export default function PricingPage() {
         </div>
       </section>
 
-      {/* Revenue Share card */}
+      {/* Revenue Share card + ROE calculator side by side */}
       <section className="bg-bone pb-20 lg:pb-28">
-        <div className="max-w-2xl mx-auto px-6 lg:px-8">
-          <AnimateOnScroll>
-            <div className="rounded-3xl overflow-hidden bg-accent shadow-2xl">
-              {/* Badge */}
-              <div className="bg-ink px-6 py-2.5 text-center">
-                <span className="font-sans text-xs tracking-[0.15em] uppercase text-bone">
-                  {revenueShare.badge}
-                </span>
-              </div>
+        <div className="max-w-7xl mx-auto px-6 lg:px-8">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-14 items-start">
 
-              <div className="px-10 pt-10 pb-12 lg:px-14 lg:pt-12 lg:pb-14 text-center">
-                <h2 className="font-serif text-3xl font-bold text-bone uppercase tracking-wide">
-                  {revenueShare.name}
-                </h2>
-                <p className="mt-2 font-sans text-sm text-ink/70">
-                  {revenueShare.headline}
-                </p>
-                <p className="mt-5 font-sans text-sm leading-relaxed text-ink/70 max-w-md mx-auto">
-                  {revenueShare.description}
-                </p>
-
-                {/* Upfront cost hero */}
-                <div className="mt-8 py-8 border-t border-b border-ink/10">
-                  <p className="font-sans text-xs uppercase tracking-widest text-bone/70 mb-2">
-                    Upfront cost
-                  </p>
-                  <p className="font-serif text-7xl font-bold text-ink leading-none">
-                    £0
-                  </p>
-                  <p className="mt-3 font-sans text-sm text-ink/60">
-                    Commission on every transaction — paid monthly to your venue
-                  </p>
+            {/* Left: pricing card */}
+            <AnimateOnScroll>
+              <div className="rounded-3xl overflow-hidden bg-accent shadow-2xl">
+                {/* Badge */}
+                <div className="bg-ink px-6 py-2.5 text-center">
+                  <span className="font-sans text-xs tracking-[0.15em] uppercase text-bone">
+                    {revenueShare.badge}
+                  </span>
                 </div>
 
-                {/* Features */}
-                <ul className="mt-8 grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-3 text-left">
-                  {revenueShare.features
-                    .filter((f) => f.included)
-                    .map((f) => (
-                      <li key={f.text} className="flex items-start gap-3">
-                        <Check
-                          size={16}
-                          className="text-bone shrink-0 mt-0.5"
-                          aria-hidden="true"
-                        />
-                        <span className="font-sans text-sm text-ink/80">
-                          {f.text}
-                        </span>
-                      </li>
-                    ))}
-                </ul>
+                <div className="px-8 pt-10 pb-12 lg:px-10 lg:pt-12 lg:pb-14 text-center">
+                  <h2 className="font-serif text-3xl font-bold text-bone uppercase tracking-wide">
+                    {revenueShare.name}
+                  </h2>
+                  <p className="mt-2 font-sans text-sm text-ink/70">
+                    {revenueShare.headline}
+                  </p>
+                  <p className="mt-5 font-sans text-sm leading-relaxed text-ink/70 max-w-md mx-auto">
+                    {revenueShare.description}
+                  </p>
 
-                {/* CTA */}
-                <div className="mt-10">
-                  <Button asChild variant="primary" size="lg" className="w-full sm:w-auto">
-                    <Link href="/contact">
-                      Apply for Revenue Share
-                      <ArrowRight size={18} />
-                    </Link>
-                  </Button>
+                  {/* Upfront cost hero */}
+                  <div className="mt-8 py-8 border-t border-b border-ink/10">
+                    <p className="font-sans text-xs uppercase tracking-widest text-bone/70 mb-2">
+                      Upfront cost
+                    </p>
+                    <p className="font-serif text-7xl font-bold text-ink leading-none">
+                      £0
+                    </p>
+                    <p className="mt-3 font-sans text-sm text-ink/60">
+                      Commission on every transaction — paid monthly to your venue
+                    </p>
+                  </div>
+
+                  {/* Features */}
+                  <ul className="mt-8 grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-3 text-left">
+                    {revenueShare.features
+                      .filter((f) => f.included)
+                      .map((f) => (
+                        <li key={f.text} className="flex items-start gap-3">
+                          <Check
+                            size={16}
+                            className="text-bone shrink-0 mt-0.5"
+                            aria-hidden="true"
+                          />
+                          <span className="font-sans text-sm text-ink/80">
+                            {f.text}
+                          </span>
+                        </li>
+                      ))}
+                  </ul>
+
+                  {/* CTA */}
+                  <div className="mt-10">
+                    <Button asChild variant="primary" size="lg" className="w-full sm:w-auto">
+                      <Link href="/contact">
+                        Apply for Revenue Share
+                        <ArrowRight size={18} />
+                      </Link>
+                    </Button>
+                  </div>
                 </div>
               </div>
-            </div>
-          </AnimateOnScroll>
 
-          <AnimateOnScroll className="mt-8 text-center">
-            <p className="font-sans text-sm text-stone leading-relaxed">
-              All figures are finalised after a free site survey.
-              We&apos;ll walk you through the numbers for your specific
-              footfall during your consultation — no obligation.
-            </p>
-          </AnimateOnScroll>
+              <p className="mt-6 font-sans text-sm text-stone leading-relaxed text-center lg:text-left">
+                All figures are finalised after a free site survey.
+                We&apos;ll walk you through the numbers for your specific
+                footfall during your consultation — no obligation.
+              </p>
+            </AnimateOnScroll>
+
+            {/* Right: ROE calculator */}
+            <AnimateOnScroll delay={80}>
+              <RoiCalculatorPanel />
+            </AnimateOnScroll>
+          </div>
         </div>
       </section>
-
-      <RoiCalculator />
 
       {/* Pricing FAQs */}
       <section className="bg-ink py-20">
