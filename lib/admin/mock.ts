@@ -39,6 +39,11 @@ import type {
   AuditEntry,
   SaleAnomaly,
   LeagueTableRow,
+  VenueInput,
+  MachineInput,
+  TicketInput,
+  InquiryInput,
+  StockItemInput,
 } from "./types";
 import {
   WHOLESALE_COST_PER_SALE_GBP,
@@ -772,42 +777,162 @@ export class MockAdminDataSource implements AdminDataSource {
     return this.salesCache.get(venueId)!;
   }
 
+  // Mutable venue + machine state (seeded from constants; supports CRUD)
+  private venues: Venue[] = VENUES.map((v) => ({ ...v }));
+  private machines: AdminMachine[] = MACHINES.map((m) => ({ ...m }));
+  private venueCounter = VENUES.length + 1;
+  private machineCounter = MACHINES.length + 1;
+  private stockItems: AdminStockItem[] = []; // lazy-seeded from MACHINES
+  private stockSeeded = false;
+
+  private activeVenues() { return this.venues.filter((v) => !v.archived); }
+  private activeMachines() { return this.machines.filter((m) => !m.archived); }
+
   private getAllSales(): AdminSale[] {
-    for (const v of VENUES) this.getVenueSales(v.id); // prime cache
+    for (const v of this.venues) this.getVenueSales(v.id); // prime cache
     return Array.from(this.salesCache.values()).flat();
   }
 
-  async getVenues(): Promise<Venue[]> {
-    return [...VENUES];
+  private getStockSeeded(): AdminStockItem[] {
+    if (!this.stockSeeded) {
+      this.stockSeeded = true;
+      // Seed from machine data
+      const ALL_FRAGS = ALL_FRAGRANCES.slice(0, 6);
+      for (const m of MACHINES) {
+        for (let slot = 1; slot <= ALL_FRAGS.length; slot++) {
+          const rng = seededRandom(m.id.charCodeAt(m.id.length - 1) * slot * 99991);
+          this.stockItems.push({
+            machineId: m.id,
+            venueId: m.venueId,
+            venueName: VENUES.find((v) => v.id === m.venueId)?.name ?? m.venueId,
+            slot,
+            fragrance: ALL_FRAGS[slot - 1],
+            quantity: this.restockedVenueIds.has(m.venueId) ? 24 : Math.floor(rng() * 24),
+            capacity: 24,
+            lowStockThreshold: 6,
+          });
+        }
+      }
+    }
+    return this.stockItems;
+  }
+
+  async getVenues(opts?: { includeArchived?: boolean }): Promise<Venue[]> {
+    return opts?.includeArchived ? [...this.venues] : this.activeVenues().map((v) => ({ ...v }));
   }
 
   async getVenueById(id: string): Promise<Venue | null> {
-    return VENUES.find((v) => v.id === id) ?? null;
+    return this.venues.find((v) => v.id === id) ?? null;
   }
 
-  async getAllMachines(): Promise<AdminMachine[]> {
-    return [...MACHINES];
+  // REAL API LATER: POST /venues
+  async createVenue(input: VenueInput): Promise<Venue> {
+    const id = `venue-${String(this.venueCounter++).padStart(3, "0")}`;
+    const venue: Venue = { ...input, id, machineIds: [] };
+    this.venues.push(venue);
+    await this.appendAuditEntry("owner", "created_venue", "venue", id, input.name, `Created venue ${input.name} (${input.type})`);
+    return { ...venue };
   }
 
-  async getMachinesByVenue(venueId: string): Promise<AdminMachine[]> {
-    return MACHINES.filter((m) => m.venueId === venueId);
+  // REAL API LATER: PATCH /venues/:id
+  async updateVenue(id: string, input: Partial<VenueInput>): Promise<Venue> {
+    const idx = this.venues.findIndex((v) => v.id === id);
+    if (idx === -1) throw new Error(`Venue ${id} not found`);
+    this.venues[idx] = { ...this.venues[idx], ...input };
+    await this.appendAuditEntry("owner", "updated_venue", "venue", id, this.venues[idx].name, `Updated venue fields: ${Object.keys(input).join(", ")}`);
+    return { ...this.venues[idx] };
+  }
+
+  // REAL API LATER: PATCH /venues/:id/archive — cascades to machines
+  async archiveVenue(id: string): Promise<void> {
+    const venue = this.venues.find((v) => v.id === id);
+    if (!venue) return;
+    venue.archived = true;
+    // Cascade: archive all machines for this venue
+    this.machines.forEach((m) => { if (m.venueId === id) m.archived = true; });
+    await this.appendAuditEntry("owner", "archived_venue", "venue", id, venue.name, "Venue archived (machines cascaded)");
+  }
+
+  // REAL API LATER: PATCH /venues/:id/restore
+  async restoreVenue(id: string): Promise<void> {
+    const venue = this.venues.find((v) => v.id === id);
+    if (!venue) return;
+    venue.archived = false;
+    // NOTE: machines are NOT auto-restored — restore individually if needed
+    await this.appendAuditEntry("owner", "restored_venue", "venue", id, venue.name, "Venue restored (machines remain individually archived)");
+  }
+
+  async getAllMachines(opts?: { includeArchived?: boolean }): Promise<AdminMachine[]> {
+    return opts?.includeArchived ? [...this.machines] : this.activeMachines().map((m) => ({ ...m }));
+  }
+
+  async getMachinesByVenue(venueId: string, opts?: { includeArchived?: boolean }): Promise<AdminMachine[]> {
+    return this.machines.filter((m) => m.venueId === venueId && (opts?.includeArchived || !m.archived));
+  }
+
+  // REAL API LATER: POST /machines
+  async createMachine(input: MachineInput): Promise<AdminMachine> {
+    const venue = this.venues.find((v) => v.id === input.venueId);
+    if (!venue) throw new Error(`Venue ${input.venueId} not found`);
+    const id = `mach-${String(this.machineCounter++).padStart(3, "0")}`;
+    const machine: AdminMachine = {
+      id,
+      venueId: input.venueId,
+      locationLabel: input.locationLabel,
+      model: input.model,
+      status: input.status ?? "offline",
+      firmware: "1.0.0",
+      lastSeen: new Date(),
+      installDate: input.installDate,
+    };
+    this.machines.push(machine);
+    venue.machineIds = [...venue.machineIds, id];
+    await this.appendAuditEntry("owner", "created_machine", "machine", id, `${venue.name} — ${input.locationLabel}`, `Model: ${input.model}`);
+    return { ...machine };
+  }
+
+  // REAL API LATER: PATCH /machines/:id
+  async updateMachine(id: string, input: Partial<Omit<MachineInput, "venueId">>): Promise<AdminMachine> {
+    const idx = this.machines.findIndex((m) => m.id === id);
+    if (idx === -1) throw new Error(`Machine ${id} not found`);
+    this.machines[idx] = { ...this.machines[idx], ...input };
+    await this.appendAuditEntry("owner", "updated_machine", "machine", id, id, `Updated: ${Object.keys(input).join(", ")}`);
+    return { ...this.machines[idx] };
+  }
+
+  // REAL API LATER: PATCH /machines/:id/archive
+  async archiveMachine(id: string): Promise<void> {
+    const machine = this.machines.find((m) => m.id === id);
+    if (!machine) return;
+    machine.archived = true;
+    const venue = this.venues.find((v) => v.id === machine.venueId);
+    await this.appendAuditEntry("owner", "archived_machine", "machine", id, `${venue?.name ?? machine.venueId} — ${machine.locationLabel}`, "Machine archived");
+  }
+
+  // REAL API LATER: PATCH /machines/:id/restore
+  async restoreMachine(id: string): Promise<void> {
+    const machine = this.machines.find((m) => m.id === id);
+    if (!machine) return;
+    machine.archived = false;
+    const venue = this.venues.find((v) => v.id === machine.venueId);
+    await this.appendAuditEntry("owner", "restored_machine", "machine", id, `${venue?.name ?? machine.venueId} — ${machine.locationLabel}`, "Machine restored");
   }
 
   async getEstateKpis(dateRange: DateRange): Promise<EstateKpis> {
     const sales = this.getAllSales().filter(
-      (s) => s.timestamp >= dateRange.from && s.timestamp <= dateRange.to
+      (s) => s.timestamp >= dateRange.from && s.timestamp <= dateRange.to && !s.archived
     );
-    const activeMachines = MACHINES.filter((m) => {
-      const v = VENUES.find((v) => v.id === m.venueId);
+    const activeMachines = this.activeMachines().filter((m) => {
+      const v = this.activeVenues().find((v) => v.id === m.venueId);
       return v?.status === "live" && m.status === "online";
     }).length;
     return {
       totalRevenueGbp: +sales.reduce((s, x) => s + x.amountGbp, 0).toFixed(2),
       unitsSold: sales.length,
       activeMachines,
-      machinesWithFaults: MACHINES.filter((m) => m.status === "fault").length,
-      openMaintenanceTickets: this.tickets.filter((t) => t.status === "open").length,
-      newInquiries: this.inquiries.filter((i) => i.status === "new").length,
+      machinesWithFaults: this.activeMachines().filter((m) => m.status === "fault").length,
+      openMaintenanceTickets: this.tickets.filter((t) => t.status === "open" && !t.archived).length,
+      newInquiries: this.inquiries.filter((i) => i.status === "new" && !i.archived).length,
     };
   }
 
@@ -845,7 +970,7 @@ export class MockAdminDataSource implements AdminDataSource {
       e.units += 1;
       map.set(s.venueId, e);
     }
-    return VENUES
+    return this.activeVenues()
       .map((v) => ({ venueId: v.id, venueName: v.name, area: v.area, type: v.type, revenueGbp: +(map.get(v.id)?.rev ?? 0).toFixed(2), unitsSold: map.get(v.id)?.units ?? 0 }))
       .sort((a, b) => b.revenueGbp - a.revenueGbp)
       .slice(0, limit);
@@ -870,19 +995,22 @@ export class MockAdminDataSource implements AdminDataSource {
   async getAttentionItems(): Promise<AttentionItems> {
     const allStock = await this.getEstateStock();
     const overdueHours = 48;
+    const activeMachs = this.activeMachines();
+    const activeVens = this.activeVenues();
     return {
-      offlineMachines: MACHINES.filter((m) => m.status === "offline" && VENUES.find((v) => v.id === m.venueId)?.status === "live"),
-      faultMachines: MACHINES.filter((m) => m.status === "fault"),
+      offlineMachines: activeMachs.filter((m) => m.status === "offline" && activeVens.find((v) => v.id === m.venueId)?.status === "live"),
+      faultMachines: activeMachs.filter((m) => m.status === "fault"),
       lowStockAlerts: allStock.filter((s) => s.quantity <= s.lowStockThreshold),
       overdueTickets: this.tickets.filter(
-        (t) => t.status === "open" && Date.now() - t.openedAt.getTime() > overdueHours * 3_600_000
+        (t) => !t.archived && t.status === "open" && Date.now() - t.openedAt.getTime() > overdueHours * 3_600_000
       ),
-      newInquiries: this.inquiries.filter((i) => i.status === "new"),
+      newInquiries: this.inquiries.filter((i) => !i.archived && i.status === "new"),
     };
   }
 
   async getEstateSales(query: EstateSalesQuery): Promise<AdminSale[]> {
     return this.getAllSales().filter((s) => {
+      if (s.archived) return false;
       if (s.timestamp < query.dateRange.from || s.timestamp > query.dateRange.to) return false;
       if (query.venueId && s.venueId !== query.venueId) return false;
       if (query.machineId && s.machineId !== query.machineId) return false;
@@ -894,6 +1022,7 @@ export class MockAdminDataSource implements AdminDataSource {
 
   async getInquiries(filter?: InquiryFilter): Promise<Inquiry[]> {
     return this.inquiries.filter((i) => {
+      if (i.archived) return false;
       if (filter?.status && i.status !== filter.status) return false;
       if (filter?.assignedTo && i.assignedTo !== filter.assignedTo) return false;
       return true;
@@ -909,8 +1038,43 @@ export class MockAdminDataSource implements AdminDataSource {
     }
   }
 
+  // REAL API LATER: POST /inquiries
+  async createInquiry(input: InquiryInput): Promise<Inquiry> {
+    const id = `inq-${String(this.inquiries.length + 1).padStart(3, "0")}-${Date.now().toString(36)}`;
+    const inquiry: Inquiry = {
+      id,
+      ...input,
+      receivedAt: new Date(),
+      status: "new",
+      assignedTo: null,
+      notes: [],
+    };
+    this.inquiries.push(inquiry);
+    await this.appendAuditEntry("owner", "created_inquiry", "inquiry", id, input.venueName, `From ${input.contactName}`);
+    return { ...inquiry };
+  }
+
+  // REAL API LATER: PATCH /inquiries/:id
+  async updateInquiry(id: string, input: Partial<InquiryInput & { status: InquiryStatus; assignedTo: string | null; notes: string[] }>): Promise<Inquiry> {
+    const idx = this.inquiries.findIndex((i) => i.id === id);
+    if (idx === -1) throw new Error(`Inquiry ${id} not found`);
+    this.inquiries[idx] = { ...this.inquiries[idx], ...input };
+    await this.appendAuditEntry("owner", "updated_inquiry", "inquiry", id, this.inquiries[idx].venueName, `Updated: ${Object.keys(input).join(", ")}`);
+    return { ...this.inquiries[idx] };
+  }
+
+  // REAL API LATER: DELETE /inquiries/:id
+  async deleteInquiry(id: string): Promise<void> {
+    const idx = this.inquiries.findIndex((i) => i.id === id);
+    if (idx === -1) return;
+    const name = this.inquiries[idx].venueName;
+    this.inquiries.splice(idx, 1);
+    await this.appendAuditEntry("owner", "deleted_inquiry", "inquiry", id, name, "Inquiry deleted");
+  }
+
   async getMaintenanceTickets(filter?: MaintenanceFilter): Promise<MaintenanceTicket[]> {
     return this.tickets.filter((t) => {
+      if (t.archived) return false;
       if (filter?.status && t.status !== filter.status) return false;
       if (filter?.priority && t.priority !== filter.priority) return false;
       if (filter?.type && t.type !== filter.type) return false;
@@ -929,14 +1093,96 @@ export class MockAdminDataSource implements AdminDataSource {
     }
   }
 
+  // REAL API LATER: POST /maintenance
+  async createMaintenanceTicket(input: TicketInput): Promise<MaintenanceTicket> {
+    const id = `ticket-${String(this.tickets.length + 1).padStart(3, "0")}-${Date.now().toString(36)}`;
+    const venue = this.venues.find((v) => v.id === input.venueId);
+    const ticket: MaintenanceTicket = {
+      id,
+      machineId: input.machineId,
+      venueId: input.venueId,
+      type: input.type,
+      priority: input.priority,
+      status: "open",
+      openedAt: new Date(),
+      scheduledFor: input.scheduledFor ? new Date(input.scheduledFor) : null,
+      completedAt: null,
+      notes: input.notes,
+      assignee: input.assignee,
+    };
+    this.tickets.push(ticket);
+    await this.appendAuditEntry("owner", "created_ticket", "ticket", id, venue?.name ?? input.venueId, `${input.type} / ${input.priority}`);
+    return { ...ticket };
+  }
+
+  // REAL API LATER: PATCH /maintenance/:id (full update)
+  async updateMaintenanceTicket(id: string, input: Partial<TicketInput & { status: TicketStatus }>): Promise<MaintenanceTicket> {
+    const idx = this.tickets.findIndex((t) => t.id === id);
+    if (idx === -1) throw new Error(`Ticket ${id} not found`);
+    const t = this.tickets[idx];
+    this.tickets[idx] = {
+      ...t,
+      ...input,
+      scheduledFor: input.scheduledFor !== undefined ? (input.scheduledFor ? new Date(input.scheduledFor) : null) : t.scheduledFor,
+      completedAt: input.status === "done" ? new Date() : t.completedAt,
+    };
+    await this.appendAuditEntry("owner", "updated_ticket", "ticket", id, id, `Updated: ${Object.keys(input).join(", ")}`);
+    return { ...this.tickets[idx] };
+  }
+
+  // REAL API LATER: DELETE /maintenance/:id
+  async deleteMaintenanceTicket(id: string): Promise<void> {
+    const idx = this.tickets.findIndex((t) => t.id === id);
+    if (idx === -1) return;
+    this.tickets.splice(idx, 1);
+    await this.appendAuditEntry("owner", "deleted_ticket", "ticket", id, id, "Ticket deleted");
+  }
+
   async getEstateStock(): Promise<AdminStockItem[]> {
-    return VENUES.flatMap((v) => {
-      const items = generateStock(v);
-      if (this.restockedVenueIds.has(v.id)) {
-        return items.map((i) => ({ ...i, quantity: i.capacity }));
-      }
-      return items;
-    });
+    const seeded = this.getStockSeeded();
+    // Apply restock overrides
+    return seeded.map((s) => this.restockedVenueIds.has(s.venueId) ? { ...s, quantity: s.capacity } : { ...s });
+  }
+
+  // REAL API LATER: PATCH /stock/:machineId/:slot
+  async updateStockItem(machineId: string, slot: number, updates: Partial<StockItemInput>): Promise<void> {
+    const item = this.getStockSeeded().find((s) => s.machineId === machineId && s.slot === slot);
+    if (item) {
+      if (updates.quantity !== undefined) item.quantity = Math.max(0, Math.min(updates.capacity ?? item.capacity, updates.quantity));
+      if (updates.capacity !== undefined) item.capacity = updates.capacity;
+      if (updates.fragrance !== undefined) item.fragrance = updates.fragrance;
+      if (updates.lowStockThreshold !== undefined) item.lowStockThreshold = updates.lowStockThreshold;
+      this.restockedVenueIds.delete(item.venueId);
+    }
+  }
+
+  // REAL API LATER: POST /stock
+  async createStockItem(input: StockItemInput): Promise<AdminStockItem> {
+    const venue = this.venues.find((v) => v.id === input.venueId);
+    const item: AdminStockItem = { ...input, venueName: venue?.name ?? input.venueId };
+    this.getStockSeeded().push(item);
+    await this.appendAuditEntry("owner", "created_stock_item", "venue", input.venueId, venue?.name ?? input.venueId, `Slot ${input.slot}: ${input.fragrance}`);
+    return { ...item };
+  }
+
+  // REAL API LATER: DELETE /stock/:machineId/:slot
+  async deleteStockItem(machineId: string, slot: number): Promise<void> {
+    const stock = this.getStockSeeded();
+    const idx = stock.findIndex((s) => s.machineId === machineId && s.slot === slot);
+    if (idx !== -1) {
+      const item = stock[idx];
+      stock.splice(idx, 1);
+      await this.appendAuditEntry("owner", "deleted_stock_item", "venue", item.venueId, item.venueName, `Slot ${slot}: ${item.fragrance}`);
+    }
+  }
+
+  // REAL API LATER: DELETE /documents/:id
+  async deleteDocument(id: string): Promise<void> {
+    const idx = this.documents.findIndex((d) => d.id === id);
+    if (idx === -1) return;
+    const name = this.documents[idx].name;
+    this.documents.splice(idx, 1);
+    await this.appendAuditEntry("owner", "deleted_document", "document", id, name, "Document deleted");
   }
 
   // ── Payouts ─────────────────────────────────────────────────────────────────
@@ -945,7 +1191,7 @@ export class MockAdminDataSource implements AdminDataSource {
     const sales = this.getAllSales().filter(
       (s) => s.timestamp >= dateRange.from && s.timestamp <= dateRange.to
     );
-    return VENUES.map((v) => {
+    return this.activeVenues().map((v) => {
       const vSales = sales.filter((s) => s.venueId === v.id);
       const grossSales = vSales.reduce((sum, s) => sum + s.amountGbp, 0);
 
@@ -990,7 +1236,7 @@ export class MockAdminDataSource implements AdminDataSource {
   // REAL API LATER: PATCH /payouts/:venueId { paidDate, reference }
   async markPayoutPaid(venueId: string, paidDate: string, reference: string): Promise<void> {
     this.payoutStates.set(venueId, { paidDate, paidReference: reference });
-    const venue = VENUES.find((v) => v.id === venueId);
+    const venue = this.venues.find((v) => v.id === venueId);
     await this.appendAuditEntry("owner", "marked_payout_paid", "payout", venueId, venue?.name ?? venueId, `Payout marked paid on ${paidDate}. Ref: ${reference}`);
   }
 
@@ -1002,9 +1248,10 @@ export class MockAdminDataSource implements AdminDataSource {
     );
     const days = Math.max(1, (dateRange.to.getTime() - dateRange.from.getTime()) / 86_400_000);
 
-    return VENUES.filter((v) => {
+    const activeMachs = this.activeMachines();
+    return this.activeVenues().filter((v) => {
       // Only include venues with at least one installed machine
-      return MACHINES.some((m) => m.venueId === v.id && m.installDate !== "—");
+      return activeMachs.some((m) => m.venueId === v.id && m.installDate !== "—");
     }).map((v) => {
       const vSales = sales.filter((s) => s.venueId === v.id);
       const grossRevenue = vSales.reduce((s, x) => s + x.amountGbp, 0);
@@ -1014,7 +1261,7 @@ export class MockAdminDataSource implements AdminDataSource {
         v.partnershipModel === "revenue-share"
           ? grossRevenue * (v.commissionPct / 100)
           : 0;
-      const deployedMachines = MACHINES.filter(
+      const deployedMachines = activeMachs.filter(
         (m) => m.venueId === v.id && m.installDate !== "—"
       ).length;
       const servicing =
@@ -1046,13 +1293,13 @@ export class MockAdminDataSource implements AdminDataSource {
     // Weighted avg commission rate across revenue-share venues
     const totalRev = allSales.reduce((s, x) => s + x.amountGbp, 0);
     const totalComm = allSales.reduce((s, x) => {
-      const v = VENUES.find((v) => v.id === x.venueId);
+      const v = this.venues.find((v) => v.id === x.venueId);
       return s + (v?.partnershipModel === "revenue-share" ? x.amountGbp * (v.commissionPct / 100) : 0);
     }, 0);
     const avgCommRate = totalRev > 0 ? totalComm / totalRev : 0;
 
-    const deployedMachines = MACHINES.filter(
-      (m) => m.installDate !== "—" && VENUES.find((v) => v.id === m.venueId)?.status !== "install-pending"
+    const deployedMachines = this.activeMachines().filter(
+      (m) => m.installDate !== "—" && this.activeVenues().find((v) => v.id === m.venueId)?.status !== "install-pending"
     ).length;
     const dailyServicing = (deployedMachines * SERVICING_COST_PER_MACHINE_MONTH_GBP) / 30;
 
@@ -1083,9 +1330,10 @@ export class MockAdminDataSource implements AdminDataSource {
 
   // ── Restock ──────────────────────────────────────────────────────────────────
 
+  // REAL API LATER: POST /venues/:venueId/restock — resets machine stock to full capacity
   async getRestockItems(): Promise<RestockItem[]> {
     const allStock = await this.getEstateStock();
-    const venueMap = new Map(VENUES.map((v) => [v.id, v]));
+    const venueMap = new Map(this.activeVenues().map((v) => [v.id, v]));
     return allStock
       .filter((s) => s.quantity <= s.lowStockThreshold)
       .map((s) => {
@@ -1106,10 +1354,9 @@ export class MockAdminDataSource implements AdminDataSource {
       });
   }
 
-  // REAL API LATER: POST /venues/:venueId/restock — resets machine stock to full capacity
   async markVenueRestocked(venueId: string): Promise<void> {
     this.restockedVenueIds.add(venueId);
-    const venue = VENUES.find((v) => v.id === venueId);
+    const venue = this.venues.find((v) => v.id === venueId);
     await this.appendAuditEntry("owner", "marked_restocked", "restock", venueId, venue?.name ?? venueId, "Venue marked as restocked — stock reset to capacity.");
   }
 
@@ -1136,7 +1383,7 @@ export class MockAdminDataSource implements AdminDataSource {
     const sales = this.getAllSales().filter(
       (s) => s.timestamp >= dateRange.from && s.timestamp <= dateRange.to
     );
-    const venueMap = new Map(VENUES.map((v) => [v.id, v]));
+    const venueMap = new Map(this.venues.map((v) => [v.id, v]));
     const days = Math.max(1, (dateRange.to.getTime() - dateRange.from.getTime()) / 86_400_000);
     const slowThreshold = SLOW_MOVER_THRESHOLD_UNITS_PER_30D * (days / 30);
 
@@ -1183,7 +1430,7 @@ export class MockAdminDataSource implements AdminDataSource {
   // ── Partners / contracts ─────────────────────────────────────────────────────
 
   async getPartnerContracts(): Promise<PartnerContract[]> {
-    return VENUES.map((v) => {
+    return this.activeVenues().map((v) => {
       const end = contractEndDate(v.goLiveDate, v.partnershipModel);
       const status = contractStatus(end, v.goLiveDate) as ContractStatus;
       const extraNotes = this.partnerNotes.get(v.id) ?? [];
@@ -1314,8 +1561,8 @@ export class MockAdminDataSource implements AdminDataSource {
     const allSales = this.getAllSales();
     const now = Date.now();
 
-    return MACHINES.filter((m) => m.installDate !== "—").map((m) => {
-      const venue = VENUES.find((v) => v.id === m.venueId)!;
+    return this.activeMachines().filter((m) => m.installDate !== "—").map((m) => {
+      const venue = this.activeVenues().find((v) => v.id === m.venueId)!;
       const installTs = new Date(m.installDate).getTime();
       const monthsInstalled = Math.max(0, (now - installTs) / (30.44 * 86_400_000));
 
@@ -1413,7 +1660,7 @@ export class MockAdminDataSource implements AdminDataSource {
     }
 
     const computed: SaleAnomaly[] = [];
-    const activeMachines = MACHINES.filter((m) => m.status === "online");
+    const activeMachines = this.activeMachines().filter((m) => m.status === "online");
     const seedMachineIds = new Set(seed.map((a) => a.machineId));
 
     const cur = new Date(dateRange.from);
@@ -1426,7 +1673,7 @@ export class MockAdminDataSource implements AdminDataSource {
       const dow = cur.getDay();
       for (const machine of activeMachines) {
         if (seedMachineIds.has(machine.id)) { cur.setDate(cur.getDate() + 1); continue; }
-        const venue = VENUES.find((v) => v.id === machine.venueId);
+        const venue = this.activeVenues().find((v) => v.id === machine.venueId);
         if (!venue || venue.status !== "live") continue;
         const cfg = getTypeConfig(venue.type);
         if (cfg.closedDays?.includes(dow)) continue;

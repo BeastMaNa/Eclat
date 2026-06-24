@@ -1,8 +1,15 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Clock, AlertTriangle } from "lucide-react";
-import type { MaintenanceTicket, TicketStatus, Priority, TicketType } from "@/lib/admin/types";
+import { Clock, AlertTriangle, Plus, Pencil, Trash2 } from "lucide-react";
+import { useRouter } from "next/navigation";
+import type {
+  MaintenanceTicket, TicketStatus, Priority, TicketType, TicketInput,
+} from "@/lib/admin/types";
+import { FormModal } from "@/app/console/_components/FormModal";
+import { ConfirmDialog } from "@/app/console/_components/ConfirmDialog";
+import { ToastList } from "@/app/console/_components/ToastList";
+import { useToast } from "@/app/console/_components/useToast";
 
 const PRIORITY_STYLES: Record<Priority, string> = {
   urgent: "bg-red-50 text-red-600",
@@ -21,25 +28,160 @@ const SLA_HOURS: Record<Priority, number> = {
   urgent: 4, high: 24, medium: 72, low: 168,
 };
 
-async function serverUpdateTicket(id: string, status: TicketStatus) {
-  await fetch("/api/console/maintenance", {
-    method: "PATCH",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ id, status }),
+// ── Ticket form ───────────────────────────────────────────────────────────────
+
+function TicketForm({
+  initial,
+  venueNames,
+  machineOptions,
+  onClose,
+  onSaved,
+}: {
+  initial?: MaintenanceTicket | null;
+  venueNames: Record<string, string>;
+  machineOptions: Array<{ id: string; venueId: string; label: string }>;
+  onClose: () => void;
+  onSaved: (msg: string) => void;
+}) {
+  const router = useRouter();
+  const [form, setForm] = useState<TicketInput>({
+    machineId: initial?.machineId ?? "",
+    venueId: initial?.venueId ?? "",
+    type: initial?.type ?? "fault",
+    priority: initial?.priority ?? "medium",
+    notes: initial?.notes ?? "",
+    assignee: initial?.assignee ?? "",
+    scheduledFor: initial?.scheduledFor instanceof Date
+      ? initial.scheduledFor.toISOString().slice(0, 10)
+      : (initial?.scheduledFor ?? null),
   });
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+
+  function set<K extends keyof TicketInput>(k: K, v: TicketInput[K]) {
+    setForm((p) => ({ ...p, [k]: v }));
+  }
+
+  const selectedMachine = machineOptions.find((m) => m.id === form.machineId);
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    setError("");
+    setSaving(true);
+    const res = await fetch("/api/console/maintenance", {
+      method: initial ? "PATCH" : "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(initial ? { id: initial.id, ...form } : form),
+    });
+    setSaving(false);
+    if (!res.ok) { setError("Save failed. Please try again."); return; }
+    router.refresh();
+    onSaved(initial ? "Ticket updated" : "Ticket created");
+    onClose();
+  }
+
+  return (
+    <form onSubmit={submit} className="space-y-4">
+      {error && <p className="font-sans text-xs text-red-600">{error}</p>}
+
+      <div className="grid grid-cols-2 gap-3">
+        <label className="block space-y-1">
+          <span className="font-sans text-[10px] uppercase tracking-wide text-stone">Machine</span>
+          <select className="w-full border border-stone/20 rounded-lg px-3 py-2 font-sans text-xs bg-white"
+            value={form.machineId}
+            onChange={(e) => {
+              const m = machineOptions.find((x) => x.id === e.target.value);
+              set("machineId", e.target.value);
+              if (m) set("venueId", m.venueId);
+            }}
+            required>
+            <option value="">Select machine…</option>
+            {machineOptions.map((m) => (
+              <option key={m.id} value={m.id}>{m.id} — {m.label}</option>
+            ))}
+          </select>
+        </label>
+
+        <label className="block space-y-1">
+          <span className="font-sans text-[10px] uppercase tracking-wide text-stone">Venue</span>
+          <input type="text" readOnly
+            className="w-full border border-stone/20 rounded-lg px-3 py-2 font-sans text-xs bg-stone/5 text-stone"
+            value={selectedMachine ? (venueNames[selectedMachine.venueId] ?? selectedMachine.venueId) : "—"} />
+        </label>
+      </div>
+
+      <div className="grid grid-cols-2 gap-3">
+        <label className="block space-y-1">
+          <span className="font-sans text-[10px] uppercase tracking-wide text-stone">Type</span>
+          <select className="w-full border border-stone/20 rounded-lg px-3 py-2 font-sans text-xs bg-white"
+            value={form.type} onChange={(e) => set("type", e.target.value as TicketType)} required>
+            {(["fault", "restock", "install", "service"] as TicketType[]).map((t) => (
+              <option key={t} value={t}>{t.charAt(0).toUpperCase() + t.slice(1)}</option>
+            ))}
+          </select>
+        </label>
+        <label className="block space-y-1">
+          <span className="font-sans text-[10px] uppercase tracking-wide text-stone">Priority</span>
+          <select className="w-full border border-stone/20 rounded-lg px-3 py-2 font-sans text-xs bg-white"
+            value={form.priority} onChange={(e) => set("priority", e.target.value as Priority)} required>
+            {(["urgent", "high", "medium", "low"] as Priority[]).map((p) => (
+              <option key={p} value={p}>{p.charAt(0).toUpperCase() + p.slice(1)}</option>
+            ))}
+          </select>
+        </label>
+      </div>
+
+      <label className="block space-y-1">
+        <span className="font-sans text-[10px] uppercase tracking-wide text-stone">Notes</span>
+        <textarea rows={3} required
+          className="w-full border border-stone/20 rounded-lg px-3 py-2 font-sans text-xs resize-none"
+          value={form.notes} onChange={(e) => set("notes", e.target.value)} />
+      </label>
+
+      <div className="grid grid-cols-2 gap-3">
+        <label className="block space-y-1">
+          <span className="font-sans text-[10px] uppercase tracking-wide text-stone">Assignee</span>
+          <input type="text" className="w-full border border-stone/20 rounded-lg px-3 py-2 font-sans text-xs"
+            value={form.assignee} onChange={(e) => set("assignee", e.target.value)} />
+        </label>
+        <label className="block space-y-1">
+          <span className="font-sans text-[10px] uppercase tracking-wide text-stone">Scheduled for</span>
+          <input type="date" className="w-full border border-stone/20 rounded-lg px-3 py-2 font-sans text-xs"
+            value={form.scheduledFor ?? ""} onChange={(e) => set("scheduledFor", e.target.value || null)} />
+        </label>
+      </div>
+
+      <div className="flex justify-end gap-2 pt-1">
+        <button type="button" onClick={onClose} className="px-4 py-2 rounded-lg border border-stone/20 font-sans text-xs font-semibold text-stone">Cancel</button>
+        <button type="submit" disabled={saving} className="px-4 py-2 rounded-lg bg-ink text-bone font-sans text-xs font-semibold disabled:opacity-50">
+          {saving ? "Saving…" : initial ? "Save changes" : "Create ticket"}
+        </button>
+      </div>
+    </form>
+  );
 }
+
+// ── Main component ────────────────────────────────────────────────────────────
 
 interface Props {
   tickets: MaintenanceTicket[];
   venueNames: Record<string, string>;
+  machineOptions: Array<{ id: string; venueId: string; label: string }>;
 }
 
-export function MaintenanceClient({ tickets: initial, venueNames }: Props) {
+export function MaintenanceClient({ tickets: initial, venueNames, machineOptions }: Props) {
+  const router = useRouter();
+  const [, startTransition] = useTransition();
+  const { toasts, addToast, removeToast } = useToast();
   const [tickets, setTickets] = useState(initial);
   const [statusFilter, setStatusFilter] = useState<TicketStatus | "">("");
   const [priorityFilter, setPriorityFilter] = useState<Priority | "">("");
   const [typeFilter, setTypeFilter] = useState<TicketType | "">("");
-  const [isPending, startTransition] = useTransition();
+  const [isPending, startStatusTransition] = useTransition();
+  const [addOpen, setAddOpen] = useState(false);
+  const [editTicket, setEditTicket] = useState<MaintenanceTicket | null>(null);
+  const [deleteTicket, setDeleteTicketState] = useState<MaintenanceTicket | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const filtered = tickets.filter((t) => {
     if (statusFilter && t.status !== statusFilter) return false;
@@ -58,11 +200,44 @@ export function MaintenanceClient({ tickets: initial, venueNames }: Props) {
     setTickets((prev) => prev.map((t) =>
       t.id === id ? { ...t, status, completedAt: status === "done" ? new Date() : t.completedAt } : t
     ));
-    startTransition(() => { serverUpdateTicket(id, status); });
+    startStatusTransition(async () => {
+      await fetch("/api/console/maintenance", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, status }),
+      });
+    });
+  }
+
+  async function handleDelete() {
+    if (!deleteTicket) return;
+    setDeleting(true);
+    const res = await fetch(`/api/console/maintenance?id=${deleteTicket.id}`, { method: "DELETE" });
+    setDeleting(false);
+    setDeleteTicketState(null);
+    if (res.ok) {
+      setTickets((prev) => prev.filter((t) => t.id !== deleteTicket.id));
+      addToast("Ticket deleted");
+    } else {
+      addToast("Delete failed", "error");
+    }
   }
 
   return (
     <div className="space-y-3">
+      <ToastList toasts={toasts} onRemove={removeToast} />
+
+      {/* Header */}
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <h1 className="font-serif text-xl font-bold text-ink">Maintenance</h1>
+        <button
+          onClick={() => setAddOpen(true)}
+          className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-ink text-bone font-sans text-xs font-semibold hover:bg-ink/80 transition-colors"
+        >
+          <Plus size={13} /> New ticket
+        </button>
+      </div>
+
       {/* Filters */}
       <div className="flex gap-2 flex-wrap">
         {(["open", "scheduled", "done"] as TicketStatus[]).map((s) => (
@@ -137,19 +312,22 @@ export function MaintenanceClient({ tickets: initial, venueNames }: Props) {
                     </td>
                     <td className="px-3 py-2.5 text-stone">{t.assignee || "—"}</td>
                     <td className="px-3 py-2.5">
-                      <div className="flex gap-1">
+                      <div className="flex items-center gap-1.5">
                         {(["open", "scheduled", "done"] as TicketStatus[])
                           .filter((s) => s !== t.status)
                           .map((s) => (
-                            <button
-                              key={s}
-                              onClick={() => updateStatus(t.id, s)}
-                              disabled={isPending}
-                              className="px-2 py-0.5 rounded font-sans text-[10px] border border-stone/20 text-stone hover:text-ink hover:border-stone/40 transition-colors capitalize disabled:opacity-50"
-                            >
+                            <button key={s} onClick={() => updateStatus(t.id, s)} disabled={isPending}
+                              className="px-2 py-0.5 rounded font-sans text-[10px] border border-stone/20 text-stone hover:text-ink hover:border-stone/40 transition-colors capitalize disabled:opacity-50">
                               → {s}
                             </button>
                           ))}
+                        <div className="h-3 border-l border-stone/20 mx-0.5" />
+                        <button onClick={() => setEditTicket(t)} className="p-0.5 text-stone/50 hover:text-ink transition-colors" aria-label="Edit">
+                          <Pencil size={12} />
+                        </button>
+                        <button onClick={() => setDeleteTicketState(t)} className="p-0.5 text-stone/50 hover:text-red-500 transition-colors" aria-label="Delete">
+                          <Trash2 size={12} />
+                        </button>
                       </div>
                     </td>
                   </tr>
@@ -162,6 +340,28 @@ export function MaintenanceClient({ tickets: initial, venueNames }: Props) {
           <p className="text-center font-sans text-sm text-stone py-8">No tickets match the current filters.</p>
         )}
       </div>
+
+      {/* Modals */}
+      {addOpen && (
+        <FormModal title="New maintenance ticket" onClose={() => setAddOpen(false)}>
+          <TicketForm venueNames={venueNames} machineOptions={machineOptions} onClose={() => setAddOpen(false)} onSaved={(msg) => { addToast(msg); startTransition(() => router.refresh()); }} />
+        </FormModal>
+      )}
+      {editTicket && (
+        <FormModal title="Edit ticket" onClose={() => setEditTicket(null)}>
+          <TicketForm initial={editTicket} venueNames={venueNames} machineOptions={machineOptions} onClose={() => setEditTicket(null)} onSaved={(msg) => { addToast(msg); startTransition(() => router.refresh()); }} />
+        </FormModal>
+      )}
+      {deleteTicket && (
+        <ConfirmDialog
+          mode="delete"
+          title={`Delete ticket ${deleteTicket.id}?`}
+          description="This cannot be undone."
+          onConfirm={handleDelete}
+          onCancel={() => setDeleteTicketState(null)}
+          isPending={deleting}
+        />
+      )}
     </div>
   );
 }

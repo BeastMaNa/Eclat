@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { getAdminDataSource } from "@/lib/admin";
 import { auth } from "@/auth";
 
@@ -35,4 +35,16 @@ export async function POST(req: Request) {
   });
 
   return NextResponse.json({ doc });
+}
+
+export async function DELETE(request: NextRequest) {
+  const session = await auth();
+  if (!session?.user || session.user.role !== "owner") {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+  const id = request.nextUrl.searchParams.get("id");
+  if (!id) return NextResponse.json({ error: "Missing id" }, { status: 400 });
+  const ds = getAdminDataSource();
+  await ds.deleteDocument(id);
+  return NextResponse.json({ ok: true });
 }

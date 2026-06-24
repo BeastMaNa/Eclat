@@ -2,8 +2,9 @@ import { auth } from "@/auth";
 import { redirect, notFound } from "next/navigation";
 import { getAdminDataSource } from "@/lib/admin";
 import Link from "next/link";
-import type { VenueStatus, MachineStatusValue } from "@/lib/admin/types";
+import type { VenueStatus } from "@/lib/admin/types";
 import { EstateChart } from "../../_components/EstateChart";
+import { VenueMachinesClient } from "./VenueMachinesClient";
 
 const fmt = (v: number) =>
   new Intl.NumberFormat("en-GB", { style: "currency", currency: "GBP", maximumFractionDigits: 0 }).format(v);
@@ -12,12 +13,6 @@ const STATUS_STYLES: Record<VenueStatus, string> = {
   "live": "bg-green-50 text-green-700",
   "install-pending": "bg-amber-50 text-amber-700",
   "paused": "bg-stone/10 text-stone",
-};
-
-const MSTATUS_STYLES: Record<MachineStatusValue, string> = {
-  "online": "bg-green-50 text-green-700",
-  "fault": "bg-red-50 text-red-600",
-  "offline": "bg-stone/10 text-stone",
 };
 
 const TYPE_LABEL: Record<string, string> = {
@@ -47,7 +42,7 @@ export default async function VenueDetailPage({ params, searchParams }: Props) {
   const from = new Date(Date.now() - days * 86_400_000);
 
   const [machines, timeSeries, stock, tickets] = await Promise.all([
-    ds.getMachinesByVenue(id),
+    ds.getMachinesByVenue(id, { includeArchived: true }),
     ds.getEstateSalesTimeSeries({ from, to }).then(async (all) => {
       // Get venue-specific series by filtering estate sales
       const sales = await ds.getEstateSales({ dateRange: { from, to }, venueId: id });
@@ -126,24 +121,7 @@ export default async function VenueDetailPage({ params, searchParams }: Props) {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
         {/* Machines */}
         <div className="bg-white border border-stone/10 rounded-xl p-5">
-          <p className="font-sans text-[10px] uppercase tracking-[0.1em] text-stone mb-4">Machines ({machines.length})</p>
-          {machines.length === 0 ? (
-            <p className="text-stone text-xs">No machines yet.</p>
-          ) : (
-            <div className="space-y-2">
-              {machines.map((m) => (
-                <div key={m.id} className="flex items-center justify-between py-2 border-b border-stone/5 last:border-0">
-                  <div>
-                    <p className="font-sans text-xs font-semibold text-ink">{m.id} · {m.locationLabel}</p>
-                    <p className="font-sans text-[10px] text-stone">{m.model} · FW {m.firmware}</p>
-                  </div>
-                  <span className={`px-2 py-0.5 rounded-full font-sans text-[10px] font-semibold ${MSTATUS_STYLES[m.status]}`}>
-                    {m.status}
-                  </span>
-                </div>
-              ))}
-            </div>
-          )}
+          <VenueMachinesClient venueId={id} machines={machines} />
         </div>
 
         {/* Open maintenance tickets */}

@@ -10,10 +10,5 @@ export default async function InquiriesPage() {
   const ds = getAdminDataSource();
   const inquiries = await ds.getInquiries();
 
-  return (
-    <div className="space-y-4">
-      <h1 className="font-serif text-xl font-bold text-ink">Inquiries</h1>
-      <InquiriesClient initialInquiries={inquiries} />
-    </div>
-  );
+  return <InquiriesClient initialInquiries={inquiries} />;
 }

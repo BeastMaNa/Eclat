@@ -1,7 +1,7 @@
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import { getAdminDataSource } from "@/lib/admin";
-import { AlertTriangle, WifiOff, Package, Clock, MessageSquare, TrendingUp, TrendingDown, Minus, Users } from "lucide-react";
+import { AlertTriangle, WifiOff, Package, Clock, MessageSquare, TrendingUp, TrendingDown, Minus, Users, Plus, Building2, Wrench } from "lucide-react";
 import Link from "next/link";
 import { EstateChart } from "./_components/EstateChart";
 import type { Venue } from "@/lib/admin/types";
@@ -65,20 +65,37 @@ export default async function ConsolePage({ searchParams }: Props) {
           <h1 className="font-serif text-xl font-bold text-ink">Overview</h1>
           <p className="font-sans text-xs text-stone mt-0.5">Manchester estate · {days}d</p>
         </div>
-        <div className="flex gap-1.5">
-          {[7, 30, 90].map((d) => (
-            <Link
-              key={d}
-              href={`/console?days=${d}`}
-              className={`px-3 py-1.5 rounded-full font-sans text-xs font-semibold border transition-colors ${
-                days === d
-                  ? "bg-accent/15 border-accent/30 text-ink"
-                  : "border-stone/20 text-stone hover:text-ink hover:border-stone/40"
-              }`}
-            >
-              {d}d
+        <div className="flex items-center gap-2 flex-wrap">
+          <div className="flex gap-1.5">
+            {[7, 30, 90].map((d) => (
+              <Link
+                key={d}
+                href={`/console?days=${d}`}
+                className={`px-3 py-1.5 rounded-full font-sans text-xs font-semibold border transition-colors ${
+                  days === d
+                    ? "bg-accent/15 border-accent/30 text-ink"
+                    : "border-stone/20 text-stone hover:text-ink hover:border-stone/40"
+                }`}
+              >
+                {d}d
+              </Link>
+            ))}
+          </div>
+          {/* Quick-add shortcuts */}
+          <div className="flex gap-1.5 border-l border-stone/15 pl-2">
+            <Link href="/console/venues?add=1" title="Add venue"
+              className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-stone/5 hover:bg-stone/10 font-sans text-[10px] font-semibold text-stone hover:text-ink transition-colors">
+              <Plus size={11} /><Building2 size={11} />
             </Link>
-          ))}
+            <Link href="/console/maintenance?add=1" title="New ticket"
+              className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-stone/5 hover:bg-stone/10 font-sans text-[10px] font-semibold text-stone hover:text-ink transition-colors">
+              <Plus size={11} /><Wrench size={11} />
+            </Link>
+            <Link href="/console/inquiries?add=1" title="New inquiry"
+              className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-stone/5 hover:bg-stone/10 font-sans text-[10px] font-semibold text-stone hover:text-ink transition-colors">
+              <Plus size={11} /><MessageSquare size={11} />
+            </Link>
+          </div>
         </div>
       </div>
 

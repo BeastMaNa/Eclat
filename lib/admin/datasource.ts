@@ -31,6 +31,11 @@ import type {
   AuditEntry,
   SaleAnomaly,
   LeagueTableRow,
+  VenueInput,
+  MachineInput,
+  TicketInput,
+  InquiryInput,
+  StockItemInput,
 } from "./types";
 
 // ─── AdminDataSource interface ────────────────────────────────────────────────
@@ -50,12 +55,30 @@ import type {
 
 export interface AdminDataSource {
   // ── Venues ────────────────────────────────────────────────────────────────
-  getVenues(): Promise<Venue[]>;
+  /** Returns active (non-archived) venues by default. */
+  getVenues(opts?: { includeArchived?: boolean }): Promise<Venue[]>;
   getVenueById(id: string): Promise<Venue | null>;
+  /** REAL API LATER: POST /venues */
+  createVenue(input: VenueInput): Promise<Venue>;
+  /** REAL API LATER: PATCH /venues/:id */
+  updateVenue(id: string, input: Partial<VenueInput>): Promise<Venue>;
+  /** REAL API LATER: PATCH /venues/:id/archive — cascades to machines */
+  archiveVenue(id: string): Promise<void>;
+  /** REAL API LATER: PATCH /venues/:id/restore */
+  restoreVenue(id: string): Promise<void>;
 
   // ── Machines ──────────────────────────────────────────────────────────────
-  getAllMachines(): Promise<AdminMachine[]>;
-  getMachinesByVenue(venueId: string): Promise<AdminMachine[]>;
+  /** Returns active (non-archived) machines by default. */
+  getAllMachines(opts?: { includeArchived?: boolean }): Promise<AdminMachine[]>;
+  getMachinesByVenue(venueId: string, opts?: { includeArchived?: boolean }): Promise<AdminMachine[]>;
+  /** REAL API LATER: POST /machines */
+  createMachine(input: MachineInput): Promise<AdminMachine>;
+  /** REAL API LATER: PATCH /machines/:id */
+  updateMachine(id: string, input: Partial<Omit<MachineInput, "venueId">>): Promise<AdminMachine>;
+  /** REAL API LATER: PATCH /machines/:id/archive */
+  archiveMachine(id: string): Promise<void>;
+  /** REAL API LATER: PATCH /machines/:id/restore */
+  restoreMachine(id: string): Promise<void>;
 
   // ── Estate overview ───────────────────────────────────────────────────────
   getEstateKpis(dateRange: DateRange): Promise<EstateKpis>;
@@ -71,14 +94,32 @@ export interface AdminDataSource {
   getInquiries(filter?: InquiryFilter): Promise<Inquiry[]>;
   /** REAL API LATER: POST /inquiries/:id/status */
   updateInquiryStatus(id: string, status: InquiryStatus, note?: string): Promise<void>;
+  /** REAL API LATER: POST /inquiries */
+  createInquiry(input: InquiryInput): Promise<Inquiry>;
+  /** REAL API LATER: PATCH /inquiries/:id */
+  updateInquiry(id: string, input: Partial<InquiryInput & { status: InquiryStatus; assignedTo: string | null; notes: string[] }>): Promise<Inquiry>;
+  /** REAL API LATER: DELETE /inquiries/:id */
+  deleteInquiry(id: string): Promise<void>;
 
   // ── Maintenance ───────────────────────────────────────────────────────────
   getMaintenanceTickets(filter?: MaintenanceFilter): Promise<MaintenanceTicket[]>;
   /** REAL API LATER: PATCH /maintenance/:id */
   updateTicketStatus(id: string, status: TicketStatus): Promise<void>;
+  /** REAL API LATER: POST /maintenance */
+  createMaintenanceTicket(input: TicketInput): Promise<MaintenanceTicket>;
+  /** REAL API LATER: PATCH /maintenance/:id (full update) */
+  updateMaintenanceTicket(id: string, input: Partial<TicketInput & { status: TicketStatus }>): Promise<MaintenanceTicket>;
+  /** REAL API LATER: DELETE /maintenance/:id */
+  deleteMaintenanceTicket(id: string): Promise<void>;
 
   // ── Stock ─────────────────────────────────────────────────────────────────
   getEstateStock(): Promise<AdminStockItem[]>;
+  /** REAL API LATER: PATCH /stock/:machineId/:slot */
+  updateStockItem(machineId: string, slot: number, updates: Partial<StockItemInput>): Promise<void>;
+  /** REAL API LATER: POST /stock */
+  createStockItem(input: StockItemInput): Promise<AdminStockItem>;
+  /** REAL API LATER: DELETE /stock/:machineId/:slot */
+  deleteStockItem(machineId: string, slot: number): Promise<void>;
 
   // ── Payouts ───────────────────────────────────────────────────────────────
   getPayoutRecords(dateRange: DateRange): Promise<PayoutRecord[]>;
@@ -121,6 +162,8 @@ export interface AdminDataSource {
   getDocuments(filter?: { venueId?: string; machineId?: string; type?: DocumentType }): Promise<ConsoleDocument[]>;
   /** REAL API LATER: POST /documents (with file upload to storage) */
   addDocument(doc: Omit<ConsoleDocument, "id" | "uploadedAt">): Promise<ConsoleDocument>;
+  /** REAL API LATER: DELETE /documents/:id */
+  deleteDocument(id: string): Promise<void>;
 
   // ── Audit log ─────────────────────────────────────────────────────────────
   getAuditLog(limit?: number): Promise<AuditEntry[]>;

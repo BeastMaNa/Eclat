@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import {
   LayoutDashboard, Map, Building2, TrendingUp,
   MessageSquare, Wrench, Package, LogOut, Menu, X,
-  Banknote, BarChart2, Truck, Droplets,
+  Banknote, BarChart2, Droplets,
   Users, Archive, CreditCard, PieChart, FileText, ClipboardList,
 } from "lucide-react";
 import { signOut } from "next-auth/react";
@@ -37,7 +37,6 @@ const NAV_SECTIONS: { heading: string; items: NavItem[] }[] = [
     heading: "Inventory",
     items: [
       { href: "/console/stock",         label: "Stock",         icon: Package,         exact: false },
-      { href: "/console/restock",       label: "Restock",       icon: Truck,           exact: false },
       { href: "/console/fragrances",    label: "Fragrances",    icon: Droplets,        exact: false },
       { href: "/console/inventory",     label: "Central Inv.",  icon: Archive,         exact: false },
     ],

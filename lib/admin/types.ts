@@ -28,6 +28,7 @@ export interface Venue {
   contactName: string;
   contactEmail: string;
   machineIds: string[];
+  archived?: boolean;
 }
 
 export interface AdminMachine {
@@ -39,6 +40,7 @@ export interface AdminMachine {
   firmware: string;
   lastSeen: Date;
   installDate: string; // "YYYY-MM-DD"
+  archived?: boolean;
 }
 
 export interface AdminSale {
@@ -50,6 +52,7 @@ export interface AdminSale {
   venueName: string;
   amountGbp: number;
   paymentType: PaymentType;
+  archived?: boolean;
 }
 
 export interface Inquiry {
@@ -64,6 +67,7 @@ export interface Inquiry {
   status: InquiryStatus;
   assignedTo: string | null;
   notes: string[];
+  archived?: boolean;
 }
 
 export interface MaintenanceTicket {
@@ -78,6 +82,7 @@ export interface MaintenanceTicket {
   completedAt: Date | null;
   notes: string;
   assignee: string;
+  archived?: boolean;
 }
 
 export interface AdminStockItem {
@@ -378,4 +383,58 @@ export interface LeagueTableRow {
   netProfitGbp: number;
   unitsSold: number;
   marginPct: number;
+}
+
+// ─── Write / input types ───────────────────────────────────────────────────────
+
+export interface VenueInput {
+  name: string;
+  area: string;
+  type: string;
+  address: string;
+  lat: number;
+  lng: number;
+  status: VenueStatus;
+  partnershipModel: PartnershipModel;
+  goLiveDate: string;
+  commissionPct: number;
+  contactName: string;
+  contactEmail: string;
+}
+
+export interface MachineInput {
+  venueId: string;
+  locationLabel: string;
+  model: string;
+  installDate: string;
+  status?: MachineStatusValue;
+}
+
+export interface TicketInput {
+  machineId: string;
+  venueId: string;
+  type: TicketType;
+  priority: Priority;
+  notes: string;
+  assignee: string;
+  scheduledFor?: string | null; // ISO string
+}
+
+export interface InquiryInput {
+  venueName: string;
+  contactName: string;
+  contactEmail: string;
+  venueType: string;
+  city: string;
+  message: string;
+}
+
+export interface StockItemInput {
+  machineId: string;
+  venueId: string;
+  slot: number;
+  fragrance: string;
+  quantity: number;
+  capacity: number;
+  lowStockThreshold: number;
 }

@@ -1,8 +1,11 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { FileText, Plus, ExternalLink, Tag } from "lucide-react";
+import { FileText, Plus, ExternalLink, Trash2 } from "lucide-react";
 import type { ConsoleDocument, DocumentType } from "@/lib/admin/types";
+import { ConfirmDialog } from "@/app/console/_components/ConfirmDialog";
+import { ToastList } from "@/app/console/_components/ToastList";
+import { useToast } from "@/app/console/_components/useToast";
 
 const TYPE_CONFIG: Record<DocumentType, { label: string; cls: string }> = {
   contract:  { label: "Contract",  cls: "bg-blue-50 text-blue-700 border-blue-200" },
@@ -23,6 +26,9 @@ export function DocumentsClient({ documents: initialDocs }: Props) {
   const [form, setForm] = useState({ name: "", type: "contract" as DocumentType, notes: "", venueId: "", uploadedBy: "owner" });
   const [isPending, startTransition] = useTransition();
   const [saved, setSaved] = useState(false);
+  const { toasts, addToast, removeToast } = useToast();
+  const [deleteDoc, setDeleteDoc] = useState<ConsoleDocument | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const filtered = docs.filter((d) => filter === "all" || d.type === filter);
 
@@ -45,6 +51,20 @@ export function DocumentsClient({ documents: initialDocs }: Props) {
     });
   }
 
+  async function handleDeleteDoc() {
+    if (!deleteDoc) return;
+    setDeleting(true);
+    const res = await fetch(`/api/console/documents?id=${deleteDoc.id}`, { method: "DELETE" });
+    setDeleting(false);
+    setDeleteDoc(null);
+    if (res.ok) {
+      setDocs((prev) => prev.filter((d) => d.id !== deleteDoc.id));
+      addToast("Document removed");
+    } else {
+      addToast("Delete failed", "error");
+    }
+  }
+
   const counts: Record<string, number> = { all: docs.length };
   for (const type of Object.keys(TYPE_CONFIG)) {
     counts[type] = docs.filter((d) => d.type === type).length;
@@ -52,6 +72,7 @@ export function DocumentsClient({ documents: initialDocs }: Props) {
 
   return (
     <div className="space-y-5">
+      <ToastList toasts={toasts} onRemove={removeToast} />
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="font-serif text-xl font-bold text-ink">Documents</h1>
@@ -169,7 +190,7 @@ export function DocumentsClient({ documents: initialDocs }: Props) {
         {filtered.map((doc) => {
           const cfg = TYPE_CONFIG[doc.type];
           return (
-            <div key={doc.id} className="bg-white border border-stone/10 rounded-xl px-5 py-4 flex items-start gap-4">
+            <div key={doc.id} className="bg-white border border-stone/10 rounded-xl px-5 py-4 flex items-start gap-4 group">
               <FileText size={18} className="text-stone/40 mt-0.5 shrink-0" />
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2 flex-wrap">
@@ -183,18 +204,27 @@ export function DocumentsClient({ documents: initialDocs }: Props) {
                   Added {new Date(doc.uploadedAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })} by {doc.uploadedBy}
                 </p>
               </div>
-              <a
-                href={doc.url === "#placeholder" ? undefined : doc.url}
-                aria-disabled={doc.url === "#placeholder"}
-                className={`shrink-0 flex items-center gap-1 font-sans text-xs ${
-                  doc.url === "#placeholder"
-                    ? "text-stone/30 cursor-not-allowed"
-                    : "text-accent hover:underline"
-                }`}
-              >
-                <ExternalLink size={12} />
-                {doc.url === "#placeholder" ? "Upload pending" : "Open"}
-              </a>
+              <div className="flex items-center gap-2 shrink-0">
+                <a
+                  href={doc.url === "#placeholder" ? undefined : doc.url}
+                  aria-disabled={doc.url === "#placeholder"}
+                  className={`flex items-center gap-1 font-sans text-xs ${
+                    doc.url === "#placeholder"
+                      ? "text-stone/30 cursor-not-allowed"
+                      : "text-accent hover:underline"
+                  }`}
+                >
+                  <ExternalLink size={12} />
+                  {doc.url === "#placeholder" ? "Upload pending" : "Open"}
+                </a>
+                <button
+                  onClick={() => setDeleteDoc(doc)}
+                  className="opacity-0 group-hover:opacity-100 p-1 text-stone/40 hover:text-red-500 transition-all"
+                  aria-label="Delete document"
+                >
+                  <Trash2 size={13} />
+                </button>
+              </div>
             </div>
           );
         })}
@@ -205,6 +235,17 @@ export function DocumentsClient({ documents: initialDocs }: Props) {
           <FileText size={24} className="mx-auto text-stone/30 mb-2" />
           <p className="font-sans text-sm text-stone">No documents match the current filter.</p>
         </div>
+      )}
+
+      {deleteDoc && (
+        <ConfirmDialog
+          mode="delete"
+          title={`Delete "${deleteDoc.name}"?`}
+          description="This removes the metadata record. It cannot be undone."
+          onConfirm={handleDeleteDoc}
+          onCancel={() => setDeleteDoc(null)}
+          isPending={deleting}
+        />
       )}
     </div>
   );
