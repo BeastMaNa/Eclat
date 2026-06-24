@@ -3,15 +3,15 @@
 import { useState, useId } from "react";
 
 // ── Price assumptions ─────────────────────────────────────────────────────────
-const AUTHENTIC_PRICE = 7;   // avg £ per vend — standard/authentic tier
-const PREMIUM_PRICE   = 12;  // avg £ per vend — premium tier
+const AUTHENTIC_PRICE = 2;   // avg £ per vend — standard/authentic tier
+const PREMIUM_PRICE   = 3;   // avg £ per vend — premium tier
 const COMMISSION_PCT  = 20;  // venue's revenue share %
 
 // ── Fragrance mix options ─────────────────────────────────────────────────────
 const MIXES = [
-  { id: "authentic", label: "Authentic", desc: "Avg £7 / vend", stdFrac: 1,   premFrac: 0   },
-  { id: "mixed",     label: "Mixed",     desc: "Avg £9.50 / vend", stdFrac: 0.5, premFrac: 0.5 },
-  { id: "premium",   label: "Premium",   desc: "Avg £12 / vend",  stdFrac: 0,   premFrac: 1   },
+  { id: "authentic", label: "Authentic", desc: "Avg £2 / vend",    stdFrac: 1,   premFrac: 0   },
+  { id: "mixed",     label: "Mixed",     desc: "Avg £2.50 / vend", stdFrac: 0.5, premFrac: 0.5 },
+  { id: "premium",   label: "Premium",   desc: "Avg £3 / vend",    stdFrac: 0,   premFrac: 1   },
 ] as const;
 
 type MixId = typeof MIXES[number]["id"];
