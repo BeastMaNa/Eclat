@@ -123,18 +123,18 @@ export default function PricingPage() {
       </section>
 
       {/* Pricing FAQs */}
-      <section className="bg-ink py-20">
-        <div className="max-w-3xl mx-auto px-6 lg:px-8">
+      <section className="bg-ink py-20 lg:py-28">
+        <div className="max-w-7xl mx-auto px-6 lg:px-8">
           <AnimateOnScroll>
             <SectionLabel className="text-accent">Common Questions</SectionLabel>
             <h2 className="font-serif text-3xl text-bone mb-12">
               What venues ask about partnership
             </h2>
           </AnimateOnScroll>
-          <div className="space-y-8">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-16 gap-y-0">
             {PRICING_FAQS.map((faq, i) => (
               <AnimateOnScroll key={i} delay={i * 60}>
-                <div className="border-b border-bone/10 pb-8">
+                <div className="border-b border-bone/10 pb-8 mb-8">
                   <h3 className="font-serif text-lg text-bone mb-3">
                     {faq.question}
                   </h3>
@@ -145,7 +145,7 @@ export default function PricingPage() {
               </AnimateOnScroll>
             ))}
           </div>
-          <AnimateOnScroll className="mt-10">
+          <AnimateOnScroll>
             <Button asChild variant="ghost" className="text-accent hover:text-accent-deep px-0">
               <Link href="/faq">See all frequently asked questions →</Link>
             </Button>
