@@ -21,9 +21,11 @@ const TYPE_LABEL: Record<string, string> = {
   "food-hall": "Food Hall", "arcade-bar": "Arcade Bar",
 };
 
+import { parseRange } from "@/lib/admin/date-range";
+
 interface Props {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ days?: string }>;
+  searchParams: Promise<{ from?: string; to?: string; days?: string }>;
 }
 
 export default async function VenueDetailPage({ params, searchParams }: Props) {
@@ -31,15 +33,11 @@ export default async function VenueDetailPage({ params, searchParams }: Props) {
   if (!session?.user || session.user.role !== "owner") redirect("/login");
 
   const { id } = await params;
-  const sp = await searchParams;
-  const days = Math.min(90, Math.max(7, parseInt(sp.days ?? "30", 10) || 30));
+  const { from, to } = parseRange(await searchParams);
 
   const ds = getAdminDataSource();
   const venue = await ds.getVenueById(id);
   if (!venue) notFound();
-
-  const to = new Date();
-  const from = new Date(Date.now() - days * 86_400_000);
 
   const [machines, timeSeries, stock, tickets] = await Promise.all([
     ds.getMachinesByVenue(id, { includeArchived: true }),
@@ -104,16 +102,8 @@ export default async function VenueDetailPage({ params, searchParams }: Props) {
 
       {/* Revenue chart */}
       <div className="bg-white border border-stone/10 rounded-xl p-5">
-        <div className="flex items-center justify-between mb-4">
+        <div className="mb-4">
           <p className="font-sans text-[10px] uppercase tracking-[0.1em] text-stone">Revenue over time</p>
-          <div className="flex gap-1.5">
-            {[7, 30, 90].map((d) => (
-              <Link key={d} href={`/console/venues/${id}?days=${d}`}
-                className={`px-2.5 py-1 rounded-full font-sans text-[10px] font-semibold border transition-colors ${days === d ? "bg-accent/15 border-accent/30 text-ink" : "border-stone/20 text-stone hover:text-ink"}`}>
-                {d}d
-              </Link>
-            ))}
-          </div>
         </div>
         <EstateChart data={timeSeries} />
       </div>

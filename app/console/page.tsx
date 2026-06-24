@@ -5,6 +5,7 @@ import { AlertTriangle, WifiOff, Package, Clock, MessageSquare, TrendingUp, Tren
 import Link from "next/link";
 import { EstateChart } from "./_components/EstateChart";
 import type { Venue } from "@/lib/admin/types";
+import { parseRange, prevRange, getRangeLabel } from "@/lib/admin/date-range";
 
 const fmt = (v: number) =>
   new Intl.NumberFormat("en-GB", { style: "currency", currency: "GBP", maximumFractionDigits: 0 }).format(v);
@@ -15,20 +16,16 @@ const VENUE_TYPE_LABEL: Record<string, string> = {
   "food-hall": "Food Hall", "arcade-bar": "Arcade Bar",
 };
 
-interface Props { searchParams: Promise<{ days?: string }> }
+interface Props { searchParams: Promise<{ from?: string; to?: string; days?: string }> }
 
 export default async function ConsolePage({ searchParams }: Props) {
   const session = await auth();
   if (!session?.user || session.user.role !== "owner") redirect("/login");
 
   const params = await searchParams;
-  const days = Math.min(90, Math.max(7, parseInt(params.days ?? "30", 10) || 30));
+  const { from, to } = parseRange(params);
   const ds = getAdminDataSource();
-  const to = new Date();
-  const from = new Date(Date.now() - days * 86_400_000);
-
-  const prevFrom = new Date(from.getTime() - days * 86_400_000);
-  const prevTo = new Date(from.getTime() - 1);
+  const { from: prevFrom, to: prevTo } = prevRange(from, to);
 
   const [kpis, timeSeries, topVenues, topFragrances, attention, league, anomalies, contracts] = await Promise.all([
     ds.getEstateKpis({ from, to }),
@@ -63,47 +60,30 @@ export default async function ConsolePage({ searchParams }: Props) {
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="font-serif text-xl font-bold text-ink">Overview</h1>
-          <p className="font-sans text-xs text-stone mt-0.5">Manchester estate · {days}d</p>
+          <p className="font-sans text-xs text-stone mt-0.5">Manchester estate</p>
         </div>
-        <div className="flex items-center gap-2 flex-wrap">
-          <div className="flex gap-1.5">
-            {[7, 30, 90].map((d) => (
-              <Link
-                key={d}
-                href={`/console?days=${d}`}
-                className={`px-3 py-1.5 rounded-full font-sans text-xs font-semibold border transition-colors ${
-                  days === d
-                    ? "bg-accent/15 border-accent/30 text-ink"
-                    : "border-stone/20 text-stone hover:text-ink hover:border-stone/40"
-                }`}
-              >
-                {d}d
-              </Link>
-            ))}
-          </div>
-          {/* Quick-add shortcuts */}
-          <div className="flex gap-1.5 border-l border-stone/15 pl-2">
-            <Link href="/console/venues?add=1" title="Add venue"
-              className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-stone/5 hover:bg-stone/10 font-sans text-[10px] font-semibold text-stone hover:text-ink transition-colors">
-              <Plus size={11} /><Building2 size={11} />
-            </Link>
-            <Link href="/console/maintenance?add=1" title="New ticket"
-              className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-stone/5 hover:bg-stone/10 font-sans text-[10px] font-semibold text-stone hover:text-ink transition-colors">
-              <Plus size={11} /><Wrench size={11} />
-            </Link>
-            <Link href="/console/inquiries?add=1" title="New inquiry"
-              className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-stone/5 hover:bg-stone/10 font-sans text-[10px] font-semibold text-stone hover:text-ink transition-colors">
-              <Plus size={11} /><MessageSquare size={11} />
-            </Link>
-          </div>
+        {/* Quick-add shortcuts */}
+        <div className="flex gap-1.5">
+          <Link href="/console/venues?add=1" title="Add venue"
+            className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-stone/5 hover:bg-stone/10 font-sans text-[10px] font-semibold text-stone hover:text-ink transition-colors">
+            <Plus size={11} /><Building2 size={11} />
+          </Link>
+          <Link href="/console/maintenance?add=1" title="New ticket"
+            className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-stone/5 hover:bg-stone/10 font-sans text-[10px] font-semibold text-stone hover:text-ink transition-colors">
+            <Plus size={11} /><Wrench size={11} />
+          </Link>
+          <Link href="/console/inquiries?add=1" title="New inquiry"
+            className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-stone/5 hover:bg-stone/10 font-sans text-[10px] font-semibold text-stone hover:text-ink transition-colors">
+            <Plus size={11} /><MessageSquare size={11} />
+          </Link>
         </div>
       </div>
 
       {/* KPI strip */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
         {[
-          { label: "Revenue", value: fmt(kpis.totalRevenueGbp), sub: `${days}d` },
-          { label: "Units sold", value: kpis.unitsSold.toLocaleString("en-GB"), sub: `${days}d` },
+          { label: "Revenue", value: fmt(kpis.totalRevenueGbp), sub: "in period" },
+          { label: "Units sold", value: kpis.unitsSold.toLocaleString("en-GB"), sub: "in period" },
           { label: "Active machines", value: kpis.activeMachines.toString(), sub: "online" },
           { label: "Faults", value: kpis.machinesWithFaults.toString(), sub: "machines", warn: kpis.machinesWithFaults > 0 },
           { label: "Open tickets", value: kpis.openMaintenanceTickets.toString(), sub: "maintenance", warn: kpis.openMaintenanceTickets > 0 },

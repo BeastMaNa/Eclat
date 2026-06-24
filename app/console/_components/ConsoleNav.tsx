@@ -11,6 +11,7 @@ import {
 import { signOut } from "next-auth/react";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
+import { useSearchParams } from "next/navigation";
 
 type NavItem = { href: string; label: string; icon: React.ElementType; exact: boolean };
 
@@ -66,7 +67,17 @@ interface ConsoleNavProps {
 
 export function ConsoleNav({ ownerName }: ConsoleNavProps) {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const [mobileOpen, setMobileOpen] = useState(false);
+
+  // Preserve date range when navigating between console pages
+  function withRange(href: string): string {
+    const from = searchParams.get("from");
+    const to = searchParams.get("to");
+    if (!from || !to) return href;
+    const sep = href.includes("?") ? "&" : "?";
+    return `${href}${sep}from=${from}&to=${to}`;
+  }
 
   function NavLinks({ onClick }: { onClick?: () => void }) {
     return (
@@ -81,7 +92,7 @@ export function ConsoleNav({ ownerName }: ConsoleNavProps) {
               return (
                 <Link
                   key={href}
-                  href={href}
+                  href={withRange(href)}
                   onClick={onClick}
                   className={cn(
                     "flex items-center gap-2.5 px-3 py-2 rounded-lg font-sans text-xs font-medium transition-colors duration-150",

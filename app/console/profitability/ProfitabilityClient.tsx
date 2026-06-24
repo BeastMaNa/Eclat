@@ -15,10 +15,9 @@ type SortKey = "margin" | "revenue" | "profit" | "venue";
 interface Props {
   rows: NetProfitSummary[];
   timeSeries: ProfitTimeSeries[];
-  days: number;
 }
 
-export function ProfitabilityClient({ rows, timeSeries, days }: Props) {
+export function ProfitabilityClient({ rows, timeSeries }: Props) {
   const [sort, setSort] = useState<SortKey>("margin");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
   const [view, setView] = useState<"gross" | "net">("net");
@@ -58,24 +57,7 @@ export function ProfitabilityClient({ rows, timeSeries, days }: Props) {
   return (
     <div className="space-y-5">
       {/* Header */}
-      <div className="flex items-center justify-between flex-wrap gap-3">
-        <h1 className="font-serif text-xl font-bold text-ink">Profitability</h1>
-        <div className="flex items-center gap-2">
-          {[7, 30, 90].map((d) => (
-            <Link
-              key={d}
-              href={`/console/profitability?days=${d}`}
-              className={`px-3 py-1 rounded-full font-sans text-xs font-semibold border transition-colors ${
-                days === d
-                  ? "bg-accent/15 border-accent/30 text-ink"
-                  : "border-stone/20 text-stone hover:text-ink"
-              }`}
-            >
-              {d}d
-            </Link>
-          ))}
-        </div>
-      </div>
+      <h1 className="font-serif text-xl font-bold text-ink">Profitability</h1>
 
       {/* KPI band */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">

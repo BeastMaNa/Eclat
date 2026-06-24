@@ -16,7 +16,7 @@ function csvRow(r: PayoutRecord, s: { status: string; paidDate?: string; paidRef
   ].map((v) => `"${String(v).replace(/"/g, '""')}"`).join(",");
 }
 
-function downloadCSV(records: PayoutRecord[], overrides: Map<string, { paidDate: string; paidReference: string }>, days: number) {
+function downloadCSV(records: PayoutRecord[], overrides: Map<string, { paidDate: string; paidReference: string }>, rangeLabel: string) {
   const header = "Venue,Area,Model,Gross Sales (£),Commission %,Partner Share (£),Éclat Share (£),Status,Paid Date,Reference";
   const rows = records.map((r) => {
     const ov = overrides.get(r.venueId);
@@ -27,17 +27,17 @@ function downloadCSV(records: PayoutRecord[], overrides: Map<string, { paidDate:
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
-  a.download = `eclat-payouts-${days}d.csv`;
+  a.download = `eclat-payouts-${rangeLabel.replace(/\s+/g, "-").replace(/[^a-z0-9-]/gi, "")}.csv`;
   a.click();
   URL.revokeObjectURL(url);
 }
 
 interface Props {
   records: PayoutRecord[];
-  days: number;
+  rangeLabel: string;
 }
 
-export function PayoutsClient({ records, days }: Props) {
+export function PayoutsClient({ records, rangeLabel }: Props) {
   const [markingId, setMarkingId] = useState<string | null>(null);
   const [form, setForm] = useState({ date: new Date().toISOString().slice(0, 10), reference: "" });
   const [optimistic, setOptimistic] = useState<Map<string, { paidDate: string; paidReference: string }>>(new Map());
@@ -71,35 +71,17 @@ export function PayoutsClient({ records, days }: Props) {
     .reduce((s, r) => s + r.partnerShareGbp, 0);
   const outstanding = revenueShare.reduce((s, r) => s + r.partnerShareGbp, 0);
 
-  const statementBase = `/console/payouts/statement`;
-  const periodParams = `&days=${days}`;
-
   return (
     <div className="space-y-5">
-      {/* Header + period tabs */}
+      {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <h1 className="font-serif text-xl font-bold text-ink">Payouts</h1>
-        <div className="flex items-center gap-2">
-          {[7, 30, 90].map((d) => (
-            <Link
-              key={d}
-              href={`/console/payouts?days=${d}`}
-              className={`px-3 py-1 rounded-full font-sans text-xs font-semibold border transition-colors ${
-                days === d
-                  ? "bg-accent/15 border-accent/30 text-ink"
-                  : "border-stone/20 text-stone hover:text-ink"
-              }`}
-            >
-              {d}d
-            </Link>
-          ))}
-          <button
-            onClick={() => downloadCSV(records, optimistic, days)}
-            className="ml-2 px-3 py-1 rounded-full font-sans text-xs font-semibold border border-stone/20 text-stone hover:text-ink transition-colors"
-          >
-            Export CSV
-          </button>
-        </div>
+        <button
+          onClick={() => downloadCSV(records, optimistic, rangeLabel)}
+          className="px-3 py-1.5 rounded-full font-sans text-xs font-semibold border border-stone/20 text-stone hover:text-ink transition-colors"
+        >
+          Export CSV
+        </button>
       </div>
 
       {/* Summary band */}
@@ -173,7 +155,7 @@ export function PayoutsClient({ records, days }: Props) {
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-2 justify-end">
                           <Link
-                            href={`${statementBase}?venueId=${r.venueId}${periodParams}`}
+                            href={`/console/payouts/statement?venueId=${r.venueId}`}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="font-sans text-xs text-accent hover:underline whitespace-nowrap"

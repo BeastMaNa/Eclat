@@ -187,10 +187,9 @@ interface Props {
   venues: (Venue & { archived?: boolean })[];
   machineCountMap: Record<string, number>;
   revenueMap: Record<string, number>;
-  days: number;
 }
 
-export function VenuesClient({ venues, machineCountMap, revenueMap, days }: Props) {
+export function VenuesClient({ venues, machineCountMap, revenueMap }: Props) {
   const router = useRouter();
   const [, startTransition] = useTransition();
   const { toasts, addToast, removeToast } = useToast();
@@ -240,22 +239,12 @@ export function VenuesClient({ venues, machineCountMap, revenueMap, days }: Prop
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <h1 className="font-serif text-xl font-bold text-ink">Venues</h1>
-        <div className="flex items-center gap-2">
-          <div className="flex gap-1.5">
-            {[7, 30, 90].map((d) => (
-              <Link key={d} href={`/console/venues?days=${d}`}
-                className={`px-3 py-1.5 rounded-full font-sans text-xs font-semibold border transition-colors ${days === d ? "bg-accent/15 border-accent/30 text-ink" : "border-stone/20 text-stone hover:text-ink"}`}>
-                {d}d
-              </Link>
-            ))}
-          </div>
-          <button
-            onClick={() => setAddOpen(true)}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-ink text-bone font-sans text-xs font-semibold hover:bg-ink/80 transition-colors"
-          >
-            <Plus size={13} /> Add venue
-          </button>
-        </div>
+        <button
+          onClick={() => setAddOpen(true)}
+          className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-ink text-bone font-sans text-xs font-semibold hover:bg-ink/80 transition-colors"
+        >
+          <Plus size={13} /> Add venue
+        </button>
       </div>
 
       {/* Filters */}

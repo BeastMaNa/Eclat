@@ -22,10 +22,9 @@ type SortKey = "units" | "revenue" | "margin";
 
 interface Props {
   analytics: FragranceAnalytic[];
-  days: number;
 }
 
-export function FragrancesClient({ analytics, days }: Props) {
+export function FragrancesClient({ analytics }: Props) {
   const [tier, setTier] = useState<"all" | "standard" | "premium">("all");
   const [slowOnly, setSlowOnly] = useState(false);
   const [sort, setSort] = useState<SortKey>("units");
@@ -66,25 +65,8 @@ export function FragrancesClient({ analytics, days }: Props) {
 
   return (
     <div className="space-y-5">
-      {/* Header + period */}
-      <div className="flex items-center justify-between flex-wrap gap-3">
-        <h1 className="font-serif text-xl font-bold text-ink">Fragrances</h1>
-        <div className="flex items-center gap-2">
-          {[7, 30, 90].map((d) => (
-            <Link
-              key={d}
-              href={`/console/fragrances?days=${d}`}
-              className={`px-3 py-1 rounded-full font-sans text-xs font-semibold border transition-colors ${
-                days === d
-                  ? "bg-accent/15 border-accent/30 text-ink"
-                  : "border-stone/20 text-stone hover:text-ink"
-              }`}
-            >
-              {d}d
-            </Link>
-          ))}
-        </div>
-      </div>
+      {/* Header */}
+      <h1 className="font-serif text-xl font-bold text-ink">Fragrances</h1>
 
       {/* Summary */}
       <div className="grid grid-cols-3 gap-3">

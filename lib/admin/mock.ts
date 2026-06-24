@@ -568,7 +568,7 @@ function getTypeConfig(type: string) {
   return VENUE_TYPE_CONFIG[type] ?? { weekdayBase: 5, weekendMult: 2, premiumFrac: 0.4 };
 }
 
-function generateVenueSales(venue: Venue, daysBack = 90): AdminSale[] {
+function generateVenueSales(venue: Venue): AdminSale[] {
   if (venue.status !== "live") return [];
   const machines = MACHINES.filter((m) => venue.machineIds.includes(m.id) && m.status !== "offline");
   if (machines.length === 0) return [];
@@ -578,6 +578,12 @@ function generateVenueSales(venue: Venue, daysBack = 90): AdminSale[] {
   const sales: AdminSale[] = [];
   const now = Date.now();
   let idCounter = 1;
+
+  // Seed data from the venue go-live date to now so "All time" ranges are meaningful
+  const goLiveMs = venue.goLiveDate && venue.goLiveDate !== "—"
+    ? new Date(venue.goLiveDate).getTime()
+    : now - 90 * 86_400_000;
+  const daysBack = Math.max(1, Math.floor((now - goLiveMs) / 86_400_000));
 
   for (let day = daysBack; day >= 0; day--) {
     const dayTs = now - day * 86_400_000;

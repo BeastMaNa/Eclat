@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { CheckCircle2, AlertTriangle, MinusCircle } from "lucide-react";
 import type { ReconciliationSummary } from "@/lib/admin/types";
 
@@ -13,37 +12,21 @@ const gbp = (v: number, signed = false) => {
 
 interface Props {
   summary: ReconciliationSummary;
-  days: number;
 }
 
-export function ReconciliationClient({ summary, days }: Props) {
+export function ReconciliationClient({ summary }: Props) {
   const discrepancyPct = summary.lines.length > 0
     ? (summary.discrepancyDays / summary.lines.filter((l) => l.status !== "zero").length) * 100
     : 0;
 
   return (
     <div className="space-y-5">
-      <div className="flex items-center justify-between flex-wrap gap-3">
-        <div>
-          <h1 className="font-serif text-xl font-bold text-ink">Reconciliation</h1>
-          <p className="font-sans text-xs text-stone mt-0.5">
-            Machine revenue vs payment processor settlement.{" "}
-            <span className="italic text-stone/60">[PLACEHOLDER — Connect real processor data: Stripe/SumUp/Adyen]</span>
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          {[7, 30, 90].map((d) => (
-            <Link
-              key={d}
-              href={`/console/reconciliation?days=${d}`}
-              className={`px-3 py-1 rounded-full font-sans text-xs font-semibold border transition-colors ${
-                days === d ? "bg-accent/15 border-accent/30 text-ink" : "border-stone/20 text-stone hover:text-ink"
-              }`}
-            >
-              {d}d
-            </Link>
-          ))}
-        </div>
+      <div>
+        <h1 className="font-serif text-xl font-bold text-ink">Reconciliation</h1>
+        <p className="font-sans text-xs text-stone mt-0.5">
+          Machine revenue vs payment processor settlement.{" "}
+          <span className="italic text-stone/60">[PLACEHOLDER — Connect real processor data: Stripe/SumUp/Adyen]</span>
+        </p>
       </div>
 
       {/* KPI cards */}
