@@ -92,7 +92,7 @@ export function RoiCalculator() {
   const venueAnnual       = venueMonthly * 12;
 
   return (
-    <section className="bg-bone py-20 lg:py-28 border-t border-stone/10">
+    <section className="bg-bone pt-10 pb-20 lg:pt-12 lg:pb-28 border-t border-stone/10">
       <div className="max-w-4xl mx-auto px-6 lg:px-8">
 
         {/* Heading */}
