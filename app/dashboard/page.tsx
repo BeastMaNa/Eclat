@@ -5,6 +5,7 @@ import { getDataSource } from "@/lib/dashboard";
 import { KpiCard } from "./_components/KpiCard";
 import { SalesChart } from "./_components/SalesChart";
 import { DateRangePicker } from "./_components/DateRangePicker";
+import { ReportIssueButton } from "./_components/ReportIssueButton";
 import { Suspense } from "react";
 
 const formatGbp = (v: number) =>
@@ -179,9 +180,12 @@ export default async function DashboardPage({ searchParams }: Props) {
           </p>
           <h1 className="font-serif text-2xl font-bold text-ink">Overview</h1>
         </div>
-        <Suspense>
-          <DateRangePicker activeDays={days} />
-        </Suspense>
+        <div className="flex items-center gap-3">
+          <ReportIssueButton venueName={session.user.venueName} />
+          <Suspense>
+            <DateRangePicker activeDays={days} />
+          </Suspense>
+        </div>
       </div>
 
       <Suspense
