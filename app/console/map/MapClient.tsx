@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import type { Venue, AdminMachine, VenueStatus } from "@/lib/admin/types";
+import type { ExpansionTarget } from "@/lib/admin/expansion-targets";
 
 interface VenueWithMachines extends Venue {
   machines: AdminMachine[];
@@ -12,6 +13,7 @@ interface VenueWithMachines extends Venue {
 interface Props {
   venues: VenueWithMachines[];
   colourMode: "status" | "performance";
+  expansionTargets?: ExpansionTarget[];
 }
 
 const STATUS_COLOUR: Record<VenueStatus, string> = {
@@ -43,10 +45,22 @@ function getPerformanceColour(rev: number, max: number): string {
 const fmt = (v: number) =>
   new Intl.NumberFormat("en-GB", { style: "currency", currency: "GBP", maximumFractionDigits: 0 }).format(v);
 
-export default function MapClient({ venues, colourMode }: Props) {
+const PRIORITY_COLOUR: Record<ExpansionTarget["priority"], string> = {
+  high:   "rgba(74,222,128,0.18)",
+  medium: "rgba(250,204,21,0.18)",
+  low:    "rgba(148,163,184,0.15)",
+};
+const PRIORITY_BORDER: Record<ExpansionTarget["priority"], string> = {
+  high:   "#4ade80",
+  medium: "#facc15",
+  low:    "#94a3b8",
+};
+
+export default function MapClient({ venues, colourMode, expansionTargets = [] }: Props) {
   const mapRef = useRef<HTMLDivElement>(null);
   const [selected, setSelected] = useState<string | null>(null);
   const [hovered, setHovered] = useState<string | null>(null);
+  const [selectedExpansion, setSelectedExpansion] = useState<string | null>(null);
   const leafletRef = useRef<{ map: L.Map; markers: Map<string, L.CircleMarker> } | null>(null);
 
   const maxRevenue = Math.max(...venues.map((v) => v.revenueGbp));
@@ -91,6 +105,29 @@ export default function MapClient({ venues, colourMode }: Props) {
         markers.set(v.id, marker);
       });
 
+      // Expansion target circles
+      expansionTargets.forEach((target) => {
+        const circle = L.default.circle([target.lat, target.lng], {
+          radius: target.radiusM,
+          fillColor: PRIORITY_COLOUR[target.priority],
+          color: PRIORITY_BORDER[target.priority],
+          weight: 1.5,
+          fillOpacity: 1,
+          dashArray: "5,5",
+        }).addTo(map);
+
+        const label = L.default.marker([target.lat, target.lng], {
+          icon: L.default.divIcon({
+            className: "",
+            html: `<div style="background:rgba(255,255,255,0.9);border:1.5px solid ${PRIORITY_BORDER[target.priority]};border-radius:4px;padding:2px 6px;font-family:sans-serif;font-size:10px;font-weight:600;white-space:nowrap;color:#14110F;">${target.name}</div>`,
+            iconAnchor: [0, 0],
+          }),
+        }).addTo(map);
+
+        circle.on("click", () => setSelectedExpansion((prev) => (prev === target.id ? null : target.id)));
+        label.on("click", () => setSelectedExpansion((prev) => (prev === target.id ? null : target.id)));
+      });
+
       leafletRef.current = { map, markers };
     });
 
@@ -115,6 +152,7 @@ export default function MapClient({ venues, colourMode }: Props) {
   }, [hovered]);
 
   const selectedVenue = venues.find((v) => v.id === selected);
+  const selectedTarget = expansionTargets.find((t) => t.id === selectedExpansion);
 
   return (
     <div className="flex flex-col lg:flex-row gap-4 h-[600px]">
@@ -122,6 +160,25 @@ export default function MapClient({ venues, colourMode }: Props) {
       <div className="flex-1 relative rounded-xl overflow-hidden border border-stone/10">
         <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
         <div ref={mapRef} className="w-full h-full" />
+
+        {/* Selected expansion target popover */}
+        {selectedTarget && !selectedVenue && (
+          <div className="absolute bottom-4 left-4 right-4 lg:right-auto lg:w-72 bg-white rounded-xl border border-stone/15 shadow-lg p-4 z-[1000]">
+            <div className="flex items-start justify-between gap-2 mb-2">
+              <div>
+                <p className="font-sans text-sm font-semibold text-ink">{selectedTarget.name}</p>
+                <p className="font-sans text-xs text-stone">Expansion target · {selectedTarget.radiusM}m radius</p>
+              </div>
+              <span className={`shrink-0 px-2 py-0.5 rounded-full font-sans text-[10px] font-semibold`}
+                style={{ background: PRIORITY_COLOUR[selectedTarget.priority], border: `1px solid ${PRIORITY_BORDER[selectedTarget.priority]}`, color: "#14110F" }}>
+                {selectedTarget.priority} priority
+              </span>
+            </div>
+            <p className="font-sans text-xs text-stone leading-relaxed">{selectedTarget.description}</p>
+            <p className="font-sans text-[10px] text-stone/50 mt-2 italic">Planning aid only — no venue data attached.</p>
+            <button onClick={() => setSelectedExpansion(null)} className="mt-2 font-sans text-xs text-accent hover:underline">Dismiss</button>
+          </div>
+        )}
 
         {/* Selected venue popover */}
         {selectedVenue && (

@@ -2,6 +2,7 @@
 
 import dynamic from "next/dynamic";
 import type { Venue, AdminMachine } from "@/lib/admin/types";
+import type { ExpansionTarget } from "@/lib/admin/expansion-targets";
 
 interface VenueWithMachines extends Venue {
   machines: AdminMachine[];
@@ -17,6 +18,14 @@ const MapClient = dynamic(() => import("./MapClient"), {
   ),
 });
 
-export function MapWrapper({ venues, colourMode }: { venues: VenueWithMachines[]; colourMode: "status" | "performance" }) {
-  return <MapClient venues={venues} colourMode={colourMode} />;
+export function MapWrapper({
+  venues,
+  colourMode,
+  expansionTargets = [],
+}: {
+  venues: VenueWithMachines[];
+  colourMode: "status" | "performance";
+  expansionTargets?: ExpansionTarget[];
+}) {
+  return <MapClient venues={venues} colourMode={colourMode} expansionTargets={expansionTargets} />;
 }

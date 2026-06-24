@@ -6,24 +6,60 @@ import {
   LayoutDashboard, Map, Building2, TrendingUp,
   MessageSquare, Wrench, Package, LogOut, Menu, X,
   Banknote, BarChart2, Truck, Droplets,
+  Users, Archive, CreditCard, PieChart, FileText, ClipboardList,
 } from "lucide-react";
 import { signOut } from "next-auth/react";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
 
-const NAV = [
-  { href: "/console",                label: "Overview",       icon: LayoutDashboard, exact: true },
-  { href: "/console/map",            label: "Map",            icon: Map,             exact: false },
-  { href: "/console/venues",         label: "Venues",         icon: Building2,       exact: false },
-  { href: "/console/sales",          label: "Sales",          icon: TrendingUp,      exact: false },
-  { href: "/console/payouts",        label: "Payouts",        icon: Banknote,        exact: false },
-  { href: "/console/profitability",  label: "Profitability",  icon: BarChart2,       exact: false },
-  { href: "/console/inquiries",      label: "Inquiries",      icon: MessageSquare,   exact: false },
-  { href: "/console/maintenance",    label: "Maintenance",    icon: Wrench,          exact: false },
-  { href: "/console/stock",          label: "Stock",          icon: Package,         exact: false },
-  { href: "/console/restock",        label: "Restock",        icon: Truck,           exact: false },
-  { href: "/console/fragrances",     label: "Fragrances",     icon: Droplets,        exact: false },
+type NavItem = { href: string; label: string; icon: React.ElementType; exact: boolean };
+
+const NAV_SECTIONS: { heading: string; items: NavItem[] }[] = [
+  {
+    heading: "Estate",
+    items: [
+      { href: "/console",               label: "Overview",      icon: LayoutDashboard, exact: true },
+      { href: "/console/map",           label: "Map",           icon: Map,             exact: false },
+      { href: "/console/venues",        label: "Venues",        icon: Building2,       exact: false },
+      { href: "/console/sales",         label: "Sales",         icon: TrendingUp,      exact: false },
+    ],
+  },
+  {
+    heading: "Revenue",
+    items: [
+      { href: "/console/payouts",       label: "Payouts",       icon: Banknote,        exact: false },
+      { href: "/console/profitability", label: "Profitability", icon: BarChart2,       exact: false },
+      { href: "/console/roi",           label: "Machine ROI",   icon: PieChart,        exact: false },
+      { href: "/console/reconciliation",label: "Reconciliation",icon: CreditCard,      exact: false },
+    ],
+  },
+  {
+    heading: "Inventory",
+    items: [
+      { href: "/console/stock",         label: "Stock",         icon: Package,         exact: false },
+      { href: "/console/restock",       label: "Restock",       icon: Truck,           exact: false },
+      { href: "/console/fragrances",    label: "Fragrances",    icon: Droplets,        exact: false },
+      { href: "/console/inventory",     label: "Central Inv.",  icon: Archive,         exact: false },
+    ],
+  },
+  {
+    heading: "Partnerships",
+    items: [
+      { href: "/console/partners",      label: "Partners",      icon: Users,           exact: false },
+      { href: "/console/inquiries",     label: "Inquiries",     icon: MessageSquare,   exact: false },
+      { href: "/console/documents",     label: "Documents",     icon: FileText,        exact: false },
+    ],
+  },
+  {
+    heading: "Operations",
+    items: [
+      { href: "/console/maintenance",   label: "Maintenance",   icon: Wrench,          exact: false },
+      { href: "/console/audit",         label: "Audit Log",     icon: ClipboardList,   exact: false },
+    ],
+  },
 ];
+
+const ALL_NAV = NAV_SECTIONS.flatMap((s) => s.items);
 
 interface ConsoleNavProps {
   ownerName: string;
@@ -33,30 +69,39 @@ export function ConsoleNav({ ownerName }: ConsoleNavProps) {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
 
-  const NavLinks = ({ onClick }: { onClick?: () => void }) => (
-    <>
-      {NAV.map(({ href, label, icon: Icon, exact }) => {
-        const active = exact ? pathname === href : pathname.startsWith(href);
-        return (
-          <Link
-            key={href}
-            href={href}
-            onClick={onClick}
-            className={cn(
-              "flex items-center gap-2.5 px-3 py-2 rounded-lg font-sans text-xs font-medium transition-colors duration-150",
-              active
-                ? "bg-accent/15 text-accent"
-                : "text-bone/50 hover:text-bone hover:bg-bone/5"
-            )}
-            aria-current={active ? "page" : undefined}
-          >
-            <Icon size={14} aria-hidden="true" />
-            {label}
-          </Link>
-        );
-      })}
-    </>
-  );
+  function NavLinks({ onClick }: { onClick?: () => void }) {
+    return (
+      <>
+        {NAV_SECTIONS.map(({ heading, items }) => (
+          <div key={heading} className="mb-4">
+            <p className="px-3 mb-1 font-sans text-[9px] uppercase tracking-[0.16em] text-bone/25 font-semibold">
+              {heading}
+            </p>
+            {items.map(({ href, label, icon: Icon, exact }) => {
+              const active = exact ? pathname === href : pathname.startsWith(href);
+              return (
+                <Link
+                  key={href}
+                  href={href}
+                  onClick={onClick}
+                  className={cn(
+                    "flex items-center gap-2.5 px-3 py-2 rounded-lg font-sans text-xs font-medium transition-colors duration-150",
+                    active
+                      ? "bg-accent/15 text-accent"
+                      : "text-bone/50 hover:text-bone hover:bg-bone/5"
+                  )}
+                  aria-current={active ? "page" : undefined}
+                >
+                  <Icon size={14} aria-hidden="true" />
+                  {label}
+                </Link>
+              );
+            })}
+          </div>
+        ))}
+      </>
+    );
+  }
 
   return (
     // print:hidden — the statement page prints without any chrome
@@ -72,7 +117,7 @@ export function ConsoleNav({ ownerName }: ConsoleNavProps) {
           </p>
         </div>
 
-        <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto" aria-label="Console navigation">
+        <nav className="flex-1 px-3 py-4 overflow-y-auto" aria-label="Console navigation">
           <NavLinks />
         </nav>
 
@@ -120,7 +165,7 @@ export function ConsoleNav({ ownerName }: ConsoleNavProps) {
                 <X size={16} />
               </button>
             </div>
-            <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto" aria-label="Console navigation">
+            <nav className="flex-1 px-3 py-4 overflow-y-auto" aria-label="Console navigation">
               <NavLinks onClick={() => setMobileOpen(false)} />
             </nav>
             <div className="px-3 pb-5 border-t border-bone/10 pt-4">

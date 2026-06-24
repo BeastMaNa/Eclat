@@ -25,11 +25,36 @@ import type {
   ProfitTimeSeries,
   RestockItem,
   FragranceAnalytic,
+  PartnerContract,
+  ContractStatus,
+  PartnerNote,
+  InventoryItem,
+  PurchaseOrder,
+  PurchaseOrderStatus,
+  ReconciliationSummary,
+  ReconciliationLine,
+  MachineRoi,
+  ConsoleDocument,
+  DocumentType,
+  AuditEntry,
+  SaleAnomaly,
+  LeagueTableRow,
 } from "./types";
 import {
   WHOLESALE_COST_PER_SALE_GBP,
   SERVICING_COST_PER_MACHINE_MONTH_GBP,
   SLOW_MOVER_THRESHOLD_UNITS_PER_30D,
+  MACHINE_PURCHASE_COST_GBP,
+  MACHINE_INSTALL_COST_GBP,
+  EXPECTED_PAYBACK_MONTHS,
+  CONTRACT_EXPIRY_WARNING_DAYS,
+  DEFAULT_REORDER_THRESHOLD,
+  DEFAULT_REORDER_QTY,
+  DEFAULT_SUPPLIER,
+  PROCESSOR_FEE_RATE,
+  RECONCILIATION_DISCREPANCY_THRESHOLD_GBP,
+  ANOMALY_LOW_FRACTION,
+  ANOMALY_MIN_BASELINE,
 } from "./costs";
 import { FRAGRANCES as CATALOG } from "@/content/catalog";
 
@@ -620,6 +645,109 @@ function generateStock(venue: Venue): AdminStockItem[] {
 
 // ─── MockAdminDataSource ──────────────────────────────────────────────────────
 
+// ─── Partner contracts seed ───────────────────────────────────────────────────
+
+function contractEndDate(startDate: string, model: string): string {
+  const d = new Date(startDate);
+  d.setFullYear(d.getFullYear() + (model === "revenue-share" ? 2 : 1));
+  return d.toISOString().slice(0, 10);
+}
+
+function contractStatus(endDate: string, startDate: string): ContractStatus {
+  const now = Date.now();
+  const end = new Date(endDate).getTime();
+  const start = new Date(startDate).getTime();
+  if (start > now) return "pending";
+  if (end < now) return "lapsed";
+  if (end - now < CONTRACT_EXPIRY_WARNING_DAYS * 86_400_000) return "expiring-soon";
+  return "active";
+}
+
+const CONTRACT_KEY_TERMS: Record<string, string> = {
+  "revenue-share": "20% partner commission. 30-day payment terms. Éclat owns and maintains the machine. Either party may terminate with 30 days written notice.",
+  "lease":         "Fixed monthly lease fee. Venue is responsible for basic care. Éclat provides one annual service visit. 12-month minimum term.",
+  "purchase":      "Outright machine purchase. Éclat provides 12-month warranty and optional extended service contract. No ongoing revenue share.",
+};
+
+// ─── Inventory seed ───────────────────────────────────────────────────────────
+
+function buildInventorySeed(fragrances: string[]): InventoryItem[] {
+  return fragrances.slice(0, 12).map((f, i) => {
+    const rng = seededRandom(i * 77777 + 13);
+    const currentStock = Math.floor(rng() * 60);
+    const needsReorder = currentStock <= DEFAULT_REORDER_THRESHOLD;
+    const isPremium = i % 3 === 0;
+    return {
+      fragrance: f,
+      tier: isPremium ? "premium" : "standard",
+      currentStock,
+      reorderThreshold: DEFAULT_REORDER_THRESHOLD,
+      reorderQty: DEFAULT_REORDER_QTY,
+      supplierName: DEFAULT_SUPPLIER,
+      costPerUnit: WHOLESALE_COST_PER_SALE_GBP,
+      needsReorder,
+    };
+  });
+}
+
+// ─── Documents seed ───────────────────────────────────────────────────────────
+
+const DOCUMENTS_SEED: ConsoleDocument[] = [
+  { id: "doc-001", name: "The Alchemist — Revenue Share Agreement 2024", type: "contract", venueId: "venue-001", url: "#placeholder", uploadedAt: "2024-03-10T10:00:00Z", uploadedBy: "Miko R.", notes: "Signed copy. Original filed with legal." },
+  { id: "doc-002", name: "Tower S1 — Warranty Certificate (mach-001)", type: "warranty", machineId: "mach-001", venueId: "venue-001", url: "#placeholder", uploadedAt: "2024-03-15T14:30:00Z", uploadedBy: "Miko R." },
+  { id: "doc-003", name: "King Street Townhouse — Revenue Share Agreement 2024", type: "contract", venueId: "venue-002", url: "#placeholder", uploadedAt: "2024-04-01T09:00:00Z", uploadedBy: "Jordan A." },
+  { id: "doc-004", name: "Warehouse Project — Lease Agreement 2024", type: "contract", venueId: "venue-003", url: "#placeholder", uploadedAt: "2024-06-01T11:00:00Z", uploadedBy: "Priya S." },
+  { id: "doc-005", name: "Éclat Public Liability Insurance 2025–2026", type: "insurance", url: "#placeholder", uploadedAt: "2025-01-05T09:00:00Z", uploadedBy: "Miko R.", notes: "Renews Jan 2027." },
+  { id: "doc-006", name: "Éclat Wholesale Ltd — Supplier Agreement", type: "supplier", url: "#placeholder", uploadedAt: "2024-02-20T10:00:00Z", uploadedBy: "Miko R.", notes: "30-day payment terms. Min order 24 units." },
+  { id: "doc-007", name: "Gotham Hotel — Revenue Share Agreement 2024", type: "contract", venueId: "venue-007", url: "#placeholder", uploadedAt: "2024-10-05T09:30:00Z", uploadedBy: "Jordan A." },
+  { id: "doc-008", name: "Marriott Salford — Revenue Share Agreement 2025", type: "contract", venueId: "venue-012", url: "#placeholder", uploadedAt: "2025-01-18T11:00:00Z", uploadedBy: "Priya S." },
+];
+
+// ─── Anomaly seed ─────────────────────────────────────────────────────────────
+// A handful of seeded anomalies representing real scenarios.
+// getSaleAnomalies merges these with any algorithmically detected ones.
+
+function buildAnomalySeed(): SaleAnomaly[] {
+  const now = Date.now();
+  return [
+    {
+      machineId: "mach-009",
+      venueId: "venue-005",
+      venueName: "Schofield's Bar",
+      locationLabel: "Back Bar",
+      date: new Date(now - 3 * 86_400_000).toISOString().slice(0, 10),
+      expectedUnits: 18,
+      actualUnits: 0,
+      severity: "critical",
+      note: "Zero sales on Friday night — machine may be empty or experiencing a fault.",
+    },
+    {
+      machineId: "mach-008",
+      venueId: "venue-004",
+      venueName: "Menagerie",
+      locationLabel: "Private Dining",
+      date: new Date(now - 2 * 86_400_000).toISOString().slice(0, 10),
+      expectedUnits: 12,
+      actualUnits: 2,
+      severity: "warning",
+      note: "Sales significantly below Sunday baseline — possible slow footfall or display issue.",
+    },
+    {
+      machineId: "mach-011",
+      venueId: "venue-007",
+      venueName: "Gotham Hotel",
+      locationLabel: "Cocktail Bar",
+      date: new Date(now - 1 * 86_400_000).toISOString().slice(0, 10),
+      expectedUnits: 10,
+      actualUnits: 1,
+      severity: "warning",
+      note: "Near-zero sales on a Sunday — venue may have had a private event limiting bar access.",
+    },
+  ];
+}
+
+// ─── MockAdminDataSource ──────────────────────────────────────────────────────
+
 export class MockAdminDataSource implements AdminDataSource {
   private salesCache = new Map<string, AdminSale[]>();
   // Mutable in-memory state for write operations
@@ -627,6 +755,14 @@ export class MockAdminDataSource implements AdminDataSource {
   private tickets: MaintenanceTicket[] = MAINTENANCE_SEED.map((t) => ({ ...t }));
   private payoutStates = new Map<string, { paidDate: string; paidReference: string }>();
   private restockedVenueIds = new Set<string>();
+  // Phase 2 mutable state
+  private partnerNotes = new Map<string, PartnerNote[]>();
+  private purchaseOrders: PurchaseOrder[] = [];
+  private poCounter = 1;
+  private documents: ConsoleDocument[] = DOCUMENTS_SEED.map((d) => ({ ...d }));
+  private auditLog: AuditEntry[] = [];
+  private auditCounter = 1;
+  private inventoryItems: InventoryItem[] = []; // lazy-initialised
 
   private getVenueSales(venueId: string): AdminSale[] {
     if (!this.salesCache.has(venueId)) {
@@ -854,6 +990,8 @@ export class MockAdminDataSource implements AdminDataSource {
   // REAL API LATER: PATCH /payouts/:venueId { paidDate, reference }
   async markPayoutPaid(venueId: string, paidDate: string, reference: string): Promise<void> {
     this.payoutStates.set(venueId, { paidDate, paidReference: reference });
+    const venue = VENUES.find((v) => v.id === venueId);
+    await this.appendAuditEntry("owner", "marked_payout_paid", "payout", venueId, venue?.name ?? venueId, `Payout marked paid on ${paidDate}. Ref: ${reference}`);
   }
 
   // ── Profitability ────────────────────────────────────────────────────────────
@@ -971,9 +1109,28 @@ export class MockAdminDataSource implements AdminDataSource {
   // REAL API LATER: POST /venues/:venueId/restock — resets machine stock to full capacity
   async markVenueRestocked(venueId: string): Promise<void> {
     this.restockedVenueIds.add(venueId);
+    const venue = VENUES.find((v) => v.id === venueId);
+    await this.appendAuditEntry("owner", "marked_restocked", "restock", venueId, venue?.name ?? venueId, "Venue marked as restocked — stock reset to capacity.");
   }
 
   // ── Fragrance analytics ──────────────────────────────────────────────────────
+
+  // ── Audit log ────────────────────────────────────────────────────────────────
+
+  async getAuditLog(limit = 100): Promise<AuditEntry[]> {
+    return [...this.auditLog].reverse().slice(0, limit);
+  }
+
+  async appendAuditEntry(
+    actor: string, action: string, entityType: AuditEntry["entityType"],
+    entityId: string, entityName: string, detail: string
+  ): Promise<void> {
+    this.auditLog.push({
+      id: `audit-${this.auditCounter++}`,
+      timestamp: new Date().toISOString(),
+      actor, action, entityType, entityId, entityName, detail,
+    });
+  }
 
   async getFragranceAnalytics(dateRange: DateRange): Promise<FragranceAnalytic[]> {
     const sales = this.getAllSales().filter(
@@ -1021,5 +1178,320 @@ export class MockAdminDataSource implements AdminDataSource {
         };
       })
       .sort((a, b) => b.totalUnits - a.totalUnits);
+  }
+
+  // ── Partners / contracts ─────────────────────────────────────────────────────
+
+  async getPartnerContracts(): Promise<PartnerContract[]> {
+    return VENUES.map((v) => {
+      const end = contractEndDate(v.goLiveDate, v.partnershipModel);
+      const status = contractStatus(end, v.goLiveDate) as ContractStatus;
+      const extraNotes = this.partnerNotes.get(v.id) ?? [];
+      return {
+        venueId: v.id,
+        venueName: v.name,
+        area: v.area,
+        contactName: v.contactName,
+        contactEmail: v.contactEmail,
+        model: v.partnershipModel,
+        commissionPct: v.commissionPct,
+        startDate: v.goLiveDate,
+        endDate: end,
+        keyTerms: CONTRACT_KEY_TERMS[v.partnershipModel] ?? "",
+        status,
+        documentId: DOCUMENTS_SEED.find((d) => d.type === "contract" && d.venueId === v.id)?.id,
+        notes: extraNotes,
+      };
+    });
+  }
+
+  // REAL API LATER: POST /partners/:venueId/notes
+  async addPartnerNote(venueId: string, author: string, body: string): Promise<void> {
+    const note: PartnerNote = {
+      id: `note-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      timestamp: new Date().toISOString(),
+      author,
+      body,
+    };
+    const existing = this.partnerNotes.get(venueId) ?? [];
+    this.partnerNotes.set(venueId, [...existing, note]);
+    const venue = VENUES.find((v) => v.id === venueId);
+    await this.appendAuditEntry(author, "added_partner_note", "partner", venueId, venue?.name ?? venueId, body.slice(0, 80));
+  }
+
+  // ── Inventory ────────────────────────────────────────────────────────────────
+
+  async getInventory(): Promise<InventoryItem[]> {
+    if (this.inventoryItems.length === 0) {
+      this.inventoryItems = buildInventorySeed(ALL_FRAGRANCES);
+    }
+    return [...this.inventoryItems];
+  }
+
+  async getPurchaseOrders(): Promise<PurchaseOrder[]> {
+    return [...this.purchaseOrders].reverse();
+  }
+
+  // REAL API LATER: POST /purchase-orders — creates a PO in the ERP / supplier system
+  async createPurchaseOrder(fragrance: string, qty: number, supplier: string, costPerUnit: number): Promise<PurchaseOrder> {
+    const po: PurchaseOrder = {
+      id: `po-${String(this.poCounter++).padStart(4, "0")}`,
+      fragrance,
+      qty,
+      supplier,
+      costPerUnit,
+      totalCost: +(qty * costPerUnit).toFixed(2),
+      status: "draft",
+      createdAt: new Date().toISOString(),
+    };
+    this.purchaseOrders.push(po);
+    await this.appendAuditEntry("owner", "created_purchase_order", "inventory", po.id, fragrance, `PO ${po.id}: ${qty} × ${fragrance} @ £${costPerUnit} from ${supplier}`);
+    return po;
+  }
+
+  // REAL API LATER: PATCH /purchase-orders/:id { status }
+  async updatePurchaseOrderStatus(id: string, status: PurchaseOrderStatus): Promise<void> {
+    const po = this.purchaseOrders.find((p) => p.id === id);
+    if (po) {
+      po.status = status;
+      await this.appendAuditEntry("owner", "updated_po_status", "inventory", id, po.fragrance, `PO ${id} status → ${status}`);
+    }
+  }
+
+  // ── Reconciliation ───────────────────────────────────────────────────────────
+  // REAL INTEGRATION LATER: replace the mock processor feed with real Stripe/SumUp/Adyen data.
+  // Swap point: lib/admin/api-datasource.ts → getReconciliation()
+
+  async getReconciliation(dateRange: DateRange): Promise<ReconciliationSummary> {
+    const timeSeries = await this.getEstateSalesTimeSeries(dateRange);
+    const rng = seededRandom(Math.floor(dateRange.from.getTime() / 86_400_000) % 9_999_991 + 1);
+
+    const lines: ReconciliationLine[] = timeSeries.map((day) => {
+      const machRev = day.revenueGbp;
+      if (machRev === 0) {
+        return { date: day.date, machineRevenue: 0, processorGross: 0, processorFees: 0, processorRefunds: 0, processorNet: 0, diff: 0, status: "zero" as const };
+      }
+      const hasDiscrepancy = rng() < 0.12; // 12% of trading days have a discrepancy
+      const noise = hasDiscrepancy ? machRev * (rng() * 0.08 - 0.04) : 0;
+      const refunds = rng() < 0.04 ? Math.round(rng() * 3) * 2 : 0;
+      const processorGross = +(machRev + noise).toFixed(2);
+      const processorFees = +(machRev * PROCESSOR_FEE_RATE).toFixed(2);
+      const processorRefunds = refunds;
+      const processorNet = +(processorGross - processorFees - processorRefunds).toFixed(2);
+      const diff = +(processorGross - machRev).toFixed(2);
+      const status: ReconciliationLine["status"] =
+        Math.abs(diff) > RECONCILIATION_DISCREPANCY_THRESHOLD_GBP ? "discrepancy" : "matched";
+      return { date: day.date, machineRevenue: machRev, processorGross, processorFees, processorRefunds, processorNet, diff, status };
+    });
+
+    const totals = lines.reduce(
+      (acc, l) => ({
+        rev: acc.rev + l.machineRevenue,
+        gross: acc.gross + l.processorGross,
+        fees: acc.fees + l.processorFees,
+        refunds: acc.refunds + l.processorRefunds,
+        net: acc.net + l.processorNet,
+      }),
+      { rev: 0, gross: 0, fees: 0, refunds: 0, net: 0 }
+    );
+
+    return {
+      totalMachineRevenue: +totals.rev.toFixed(2),
+      totalProcessorGross: +totals.gross.toFixed(2),
+      totalProcessorFees: +totals.fees.toFixed(2),
+      totalProcessorRefunds: +totals.refunds.toFixed(2),
+      totalProcessorNet: +totals.net.toFixed(2),
+      totalDiff: +(totals.gross - totals.rev).toFixed(2),
+      matchedDays: lines.filter((l) => l.status === "matched").length,
+      discrepancyDays: lines.filter((l) => l.status === "discrepancy").length,
+      lines,
+    };
+  }
+
+  // ── Machine ROI ──────────────────────────────────────────────────────────────
+
+  async getMachineRoi(): Promise<MachineRoi[]> {
+    const allSales = this.getAllSales();
+    const now = Date.now();
+
+    return MACHINES.filter((m) => m.installDate !== "—").map((m) => {
+      const venue = VENUES.find((v) => v.id === m.venueId)!;
+      const installTs = new Date(m.installDate).getTime();
+      const monthsInstalled = Math.max(0, (now - installTs) / (30.44 * 86_400_000));
+
+      // Revenue from this machine since install
+      const machineSales = allSales.filter(
+        (s) => s.machineId === m.id && s.timestamp.getTime() >= installTs
+      );
+      const revenue = machineSales.reduce((s, x) => s + x.amountGbp, 0);
+      const units = machineSales.length;
+      const cogs = units * WHOLESALE_COST_PER_SALE_GBP;
+      const commission = venue.partnershipModel === "revenue-share" ? revenue * (venue.commissionPct / 100) : 0;
+      const servicing = monthsInstalled * SERVICING_COST_PER_MACHINE_MONTH_GBP;
+      const netProfitToDate = revenue - cogs - commission - servicing;
+
+      const purchaseCost = MACHINE_PURCHASE_COST_GBP[m.model] ?? 3000;
+      const totalCapitalCost = purchaseCost + MACHINE_INSTALL_COST_GBP;
+      const roiPct = totalCapitalCost > 0 ? (netProfitToDate / totalCapitalCost) * 100 : 0;
+      const isPaidBack = netProfitToDate >= totalCapitalCost;
+      const isOverdue = !isPaidBack && monthsInstalled > EXPECTED_PAYBACK_MONTHS;
+
+      // Project payback month
+      let projectedPaybackMonth: string | null = null;
+      if (!isPaidBack && monthsInstalled > 1) {
+        const monthlyNetRate = netProfitToDate / monthsInstalled;
+        if (monthlyNetRate > 0) {
+          const remainingProfit = totalCapitalCost - netProfitToDate;
+          const monthsLeft = remainingProfit / monthlyNetRate;
+          const paybackDate = new Date(installTs + (monthsInstalled + monthsLeft) * 30.44 * 86_400_000);
+          projectedPaybackMonth = paybackDate.toISOString().slice(0, 7);
+        }
+      }
+
+      return {
+        machineId: m.id,
+        venueId: m.venueId,
+        venueName: venue.name,
+        locationLabel: m.locationLabel,
+        model: m.model,
+        installDate: m.installDate,
+        purchaseCost,
+        installCost: MACHINE_INSTALL_COST_GBP,
+        totalCapitalCost,
+        netProfitToDate: +netProfitToDate.toFixed(2),
+        roiPct: +roiPct.toFixed(1),
+        monthsInstalled: +monthsInstalled.toFixed(1),
+        isPaidBack,
+        isOverdue,
+        projectedPaybackMonth,
+      };
+    });
+  }
+
+  // ── Documents ────────────────────────────────────────────────────────────────
+
+  async getDocuments(filter?: { venueId?: string; machineId?: string; type?: DocumentType }): Promise<ConsoleDocument[]> {
+    return this.documents.filter((d) => {
+      if (filter?.venueId && d.venueId !== filter.venueId) return false;
+      if (filter?.machineId && d.machineId !== filter.machineId) return false;
+      if (filter?.type && d.type !== filter.type) return false;
+      return true;
+    });
+  }
+
+  // REAL API LATER: POST /documents (multipart, uploads file to S3/Vercel Blob/Cloudflare R2)
+  // The real implementation would: 1. upload the file to storage, 2. save metadata to DB.
+  // For now, we only store metadata (no actual file).
+  async addDocument(doc: Omit<ConsoleDocument, "id" | "uploadedAt">): Promise<ConsoleDocument> {
+    const full: ConsoleDocument = {
+      ...doc,
+      id: `doc-${String(this.documents.length + 1).padStart(3, "0")}`,
+      uploadedAt: new Date().toISOString(),
+    };
+    this.documents.push(full);
+    await this.appendAuditEntry(doc.uploadedBy, "added_document", "document", full.id, doc.name, `Document type: ${doc.type}`);
+    return full;
+  }
+
+  // ── Anomaly detection ────────────────────────────────────────────────────────
+  // REAL INTEGRATION LATER: with a live sales feed this runs on streaming data.
+  // On mock: returns seeded anomaly scenarios + any machine with 0 sales on a high-traffic day.
+
+  async getSaleAnomalies(dateRange: DateRange): Promise<SaleAnomaly[]> {
+    const seed = buildAnomalySeed().filter(
+      (a) => a.date >= dateRange.from.toISOString().slice(0, 10) &&
+             a.date <= dateRange.to.toISOString().slice(0, 10)
+    );
+
+    const periodSales = this.getAllSales().filter(
+      (s) => s.timestamp >= dateRange.from && s.timestamp <= dateRange.to
+    );
+    const byMachineDate = new Map<string, number>();
+    for (const s of periodSales) {
+      const key = `${s.machineId}|${s.timestamp.toISOString().slice(0, 10)}`;
+      byMachineDate.set(key, (byMachineDate.get(key) ?? 0) + 1);
+    }
+
+    const computed: SaleAnomaly[] = [];
+    const activeMachines = MACHINES.filter((m) => m.status === "online");
+    const seedMachineIds = new Set(seed.map((a) => a.machineId));
+
+    const cur = new Date(dateRange.from);
+    cur.setHours(12, 0, 0, 0);
+    const end = new Date(dateRange.to);
+    const DOW_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+    while (cur <= end) {
+      const dateStr = cur.toISOString().slice(0, 10);
+      const dow = cur.getDay();
+      for (const machine of activeMachines) {
+        if (seedMachineIds.has(machine.id)) { cur.setDate(cur.getDate() + 1); continue; }
+        const venue = VENUES.find((v) => v.id === machine.venueId);
+        if (!venue || venue.status !== "live") continue;
+        const cfg = getTypeConfig(venue.type);
+        if (cfg.closedDays?.includes(dow)) continue;
+        const isWeekend = dow === 0 || dow === 5 || dow === 6;
+        const expected = cfg.weekdayBase * (isWeekend ? cfg.weekendMult : 1);
+        if (expected < ANOMALY_MIN_BASELINE) continue;
+        const actual = byMachineDate.get(`${machine.id}|${dateStr}`) ?? 0;
+        if (actual < expected * ANOMALY_LOW_FRACTION) {
+          computed.push({
+            machineId: machine.id,
+            venueId: machine.venueId,
+            venueName: venue.name,
+            locationLabel: machine.locationLabel,
+            date: dateStr,
+            expectedUnits: Math.round(expected),
+            actualUnits: actual,
+            severity: actual === 0 ? "critical" : "warning",
+            note: actual === 0
+              ? `Zero sales on ${DOW_NAMES[dow]} — check machine is operational.`
+              : `${actual} sales vs ~${Math.round(expected)} expected on ${DOW_NAMES[dow]}.`,
+          });
+        }
+      }
+      cur.setDate(cur.getDate() + 1);
+    }
+
+    return [...seed, ...computed].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 20);
+  }
+
+  // ── League table ─────────────────────────────────────────────────────────────
+
+  async getLeagueTable(current: DateRange, previous: DateRange): Promise<LeagueTableRow[]> {
+    const [currProfit, prevProfit, currTop] = await Promise.all([
+      this.getNetProfitability(current),
+      this.getNetProfitability(previous),
+      this.getTopVenuesByRevenue(current, 50),
+    ]);
+
+    const unitsMap = new Map(currTop.map((v) => [v.venueId, v.unitsSold]));
+
+    const prevRankMap = new Map(
+      [...prevProfit]
+        .sort((a, b) => b.grossRevenueGbp - a.grossRevenueGbp)
+        .map((r, i) => [r.venueId, i + 1])
+    );
+
+    return currProfit
+      .filter((r) => r.grossRevenueGbp > 0)
+      .sort((a, b) => b.grossRevenueGbp - a.grossRevenueGbp)
+      .map((r, i) => {
+        const rank = i + 1;
+        const prevRank = prevRankMap.get(r.venueId) ?? rank;
+        return {
+          rank,
+          prevRank,
+          movement: prevRank - rank,
+          venueId: r.venueId,
+          venueName: r.venueName,
+          area: r.area,
+          type: r.type,
+          revenueGbp: r.grossRevenueGbp,
+          netProfitGbp: r.netProfitGbp,
+          unitsSold: unitsMap.get(r.venueId) ?? 0,
+          marginPct: r.marginPct,
+        };
+      });
   }
 }

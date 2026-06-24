@@ -1,7 +1,7 @@
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import { getAdminDataSource } from "@/lib/admin";
-import { AlertTriangle, Wifi, WifiOff, Package, Clock, MessageSquare } from "lucide-react";
+import { AlertTriangle, WifiOff, Package, Clock, MessageSquare, TrendingUp, TrendingDown, Minus, Users } from "lucide-react";
 import Link from "next/link";
 import { EstateChart } from "./_components/EstateChart";
 import type { Venue } from "@/lib/admin/types";
@@ -27,20 +27,32 @@ export default async function ConsolePage({ searchParams }: Props) {
   const to = new Date();
   const from = new Date(Date.now() - days * 86_400_000);
 
-  const [kpis, timeSeries, topVenues, topFragrances, attention] = await Promise.all([
+  const prevFrom = new Date(from.getTime() - days * 86_400_000);
+  const prevTo = new Date(from.getTime() - 1);
+
+  const [kpis, timeSeries, topVenues, topFragrances, attention, league, anomalies, contracts] = await Promise.all([
     ds.getEstateKpis({ from, to }),
     ds.getEstateSalesTimeSeries({ from, to }),
     ds.getTopVenuesByRevenue({ from, to }, 8),
     ds.getTopFragrancesEstate({ from, to }, 6),
     ds.getAttentionItems(),
+    ds.getLeagueTable({ from, to }, { from: prevFrom, to: prevTo }),
+    ds.getSaleAnomalies({ from, to }),
+    ds.getPartnerContracts(),
   ]);
+
+  const expiringContracts = contracts.filter((c) => c.status === "expiring-soon" || c.status === "lapsed");
+  const criticalAnomalies = anomalies.filter((a) => a.severity === "critical");
+  const warningAnomalies = anomalies.filter((a) => a.severity === "warning");
 
   const attentionCount =
     attention.offlineMachines.length +
     attention.faultMachines.length +
     attention.lowStockAlerts.length +
     attention.overdueTickets.length +
-    attention.newInquiries.length;
+    attention.newInquiries.length +
+    criticalAnomalies.length +
+    expiringContracts.length;
 
   const venues = await ds.getVenues();
   const venueMap = Object.fromEntries(venues.map((v: Venue) => [v.id, v]));
@@ -132,6 +144,53 @@ export default async function ConsolePage({ searchParams }: Props) {
         </div>
       </div>
 
+      {/* League table */}
+      {league.length > 0 && (
+        <div className="bg-white border border-stone/10 rounded-xl p-4">
+          <div className="flex items-center justify-between mb-4">
+            <p className="font-sans text-[10px] uppercase tracking-[0.1em] text-stone font-semibold">Venue league table</p>
+            <Link href="/console/venues" className="font-sans text-[10px] text-accent hover:underline">Full view →</Link>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left">
+              <thead>
+                <tr className="border-b border-stone/10">
+                  <th className="pb-2 font-sans text-[10px] uppercase tracking-[0.1em] text-stone font-medium w-8">#</th>
+                  <th className="pb-2 font-sans text-[10px] uppercase tracking-[0.1em] text-stone font-medium w-6">±</th>
+                  <th className="pb-2 font-sans text-[10px] uppercase tracking-[0.1em] text-stone font-medium">Venue</th>
+                  <th className="pb-2 font-sans text-[10px] uppercase tracking-[0.1em] text-stone font-medium text-right">Revenue</th>
+                  <th className="pb-2 font-sans text-[10px] uppercase tracking-[0.1em] text-stone font-medium text-right">Net profit</th>
+                  <th className="pb-2 font-sans text-[10px] uppercase tracking-[0.1em] text-stone font-medium text-right hidden sm:table-cell">Margin</th>
+                </tr>
+              </thead>
+              <tbody>
+                {league.slice(0, 8).map((row) => (
+                  <tr key={row.venueId} className="border-b border-stone/5 hover:bg-stone/3 transition-colors">
+                    <td className="py-2 font-serif text-[10px] text-stone/50">{row.rank}</td>
+                    <td className="py-2">
+                      {row.movement > 0 && <TrendingUp size={11} className="text-green-600" />}
+                      {row.movement < 0 && <TrendingDown size={11} className="text-red-500" />}
+                      {row.movement === 0 && <Minus size={11} className="text-stone/30" />}
+                    </td>
+                    <td className="py-2">
+                      <Link href={`/console/venues/${row.venueId}`} className="font-sans text-xs text-ink hover:text-accent transition-colors">
+                        {row.venueName}
+                      </Link>
+                      <span className="ml-1.5 font-sans text-[10px] text-stone">{row.area}</span>
+                    </td>
+                    <td className="py-2 font-sans text-xs tabular-nums text-ink text-right">{fmt(row.revenueGbp)}</td>
+                    <td className="py-2 font-sans text-xs tabular-nums font-semibold text-right">
+                      <span className={row.netProfitGbp >= 0 ? "text-green-700" : "text-red-600"}>{fmt(row.netProfitGbp)}</span>
+                    </td>
+                    <td className="py-2 font-sans text-xs tabular-nums text-stone text-right hidden sm:table-cell">{row.marginPct.toFixed(1)}%</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
       {/* Attention panel */}
       {attentionCount > 0 && (
         <div className="bg-white border border-amber-200 rounded-xl p-4">
@@ -142,6 +201,27 @@ export default async function ConsolePage({ searchParams }: Props) {
             </h2>
           </div>
           <div className="space-y-2">
+            {/* Critical anomalies */}
+            {criticalAnomalies.map((a) => (
+              <Link key={`${a.machineId}-${a.date}`} href="/console/maintenance" className="flex items-center gap-3 px-3 py-2 rounded-lg bg-red-50 hover:bg-red-100 transition-colors group">
+                <AlertTriangle size={12} className="text-red-500 shrink-0" />
+                <span className="font-sans text-xs text-ink flex-1">
+                  <span className="font-semibold">{a.venueName}</span> — {a.note}
+                </span>
+                <span className="font-sans text-[10px] text-stone group-hover:text-accent">View →</span>
+              </Link>
+            ))}
+            {/* Expiring contracts */}
+            {expiringContracts.map((c) => (
+              <Link key={c.venueId} href="/console/partners" className="flex items-center gap-3 px-3 py-2 rounded-lg bg-amber-50 hover:bg-amber-100 transition-colors group">
+                <Users size={12} className="text-amber-600 shrink-0" />
+                <span className="font-sans text-xs text-ink flex-1">
+                  Contract {c.status === "lapsed" ? "lapsed" : "expiring soon"} — <span className="font-semibold">{c.venueName}</span>
+                  {c.status !== "lapsed" && ` (ends ${c.endDate})`}
+                </span>
+                <span className="font-sans text-[10px] text-stone group-hover:text-accent">View →</span>
+              </Link>
+            ))}
             {attention.faultMachines.map((m) => (
               <Link key={m.id} href={`/console/maintenance`} className="flex items-center gap-3 px-3 py-2 rounded-lg bg-red-50 hover:bg-red-100 transition-colors group">
                 <WifiOff size={12} className="text-red-500 shrink-0" />
@@ -194,6 +274,16 @@ export default async function ConsolePage({ searchParams }: Props) {
                 <span className="font-sans text-[10px] text-stone group-hover:text-accent">View →</span>
               </Link>
             ))}
+            {/* Warning anomalies (lower priority, collapsed) */}
+            {warningAnomalies.length > 0 && (
+              <Link href="/console/maintenance" className="flex items-center gap-3 px-3 py-2 rounded-lg bg-stone/5 hover:bg-stone/10 transition-colors group">
+                <AlertTriangle size={12} className="text-amber-500 shrink-0" />
+                <span className="font-sans text-xs text-stone flex-1">
+                  {warningAnomalies.length} sale anomaly warning{warningAnomalies.length !== 1 ? "s" : ""} detected
+                </span>
+                <span className="font-sans text-[10px] text-stone group-hover:text-accent">View →</span>
+              </Link>
+            )}
           </div>
         </div>
       )}

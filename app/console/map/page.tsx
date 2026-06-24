@@ -3,8 +3,9 @@ import { redirect } from "next/navigation";
 import { getAdminDataSource } from "@/lib/admin";
 import Link from "next/link";
 import { MapWrapper } from "./MapWrapper";
+import { EXPANSION_TARGETS } from "@/lib/admin/expansion-targets";
 
-interface Props { searchParams: Promise<{ mode?: string; days?: string }> }
+interface Props { searchParams: Promise<{ mode?: string; days?: string; expansion?: string }> }
 
 export default async function MapPage({ searchParams }: Props) {
   const session = await auth();
@@ -13,6 +14,7 @@ export default async function MapPage({ searchParams }: Props) {
   const params = await searchParams;
   const colourMode = params.mode === "performance" ? "performance" : "status";
   const days = Math.min(90, Math.max(7, parseInt(params.days ?? "30", 10) || 30));
+  const showExpansion = params.expansion === "1";
 
   const ds = getAdminDataSource();
   const to = new Date();
@@ -41,7 +43,7 @@ export default async function MapPage({ searchParams }: Props) {
             {["status", "performance"].map((m) => (
               <Link
                 key={m}
-                href={`/console/map?mode=${m}&days=${days}`}
+                href={`/console/map?mode=${m}&days=${days}${showExpansion ? "&expansion=1" : ""}`}
                 className={`px-3 py-1.5 rounded-full font-sans text-xs font-semibold border transition-colors ${
                   colourMode === m
                     ? "bg-accent/15 border-accent/30 text-ink"
@@ -52,11 +54,21 @@ export default async function MapPage({ searchParams }: Props) {
               </Link>
             ))}
           </div>
+          <Link
+            href={`/console/map?mode=${colourMode}&days=${days}&expansion=${showExpansion ? "0" : "1"}`}
+            className={`px-3 py-1.5 rounded-full font-sans text-xs font-semibold border transition-colors ${
+              showExpansion
+                ? "bg-green-50 border-green-300 text-green-700"
+                : "border-stone/20 text-stone hover:text-ink"
+            }`}
+          >
+            Expansion targets
+          </Link>
           <div className="flex gap-1.5">
             {[7, 30, 90].map((d) => (
               <Link
                 key={d}
-                href={`/console/map?mode=${colourMode}&days=${d}`}
+                href={`/console/map?mode=${colourMode}&days=${d}${showExpansion ? "&expansion=1" : ""}`}
                 className={`px-3 py-1.5 rounded-full font-sans text-xs font-semibold border transition-colors ${
                   days === d
                     ? "bg-accent/15 border-accent/30 text-ink"
@@ -80,9 +92,25 @@ export default async function MapPage({ searchParams }: Props) {
             <span className="font-sans text-xs text-stone">{label}</span>
           </div>
         ))}
+        {showExpansion && (
+          <>
+            <div className="flex items-center gap-1.5">
+              <span className="w-2.5 h-2.5 rounded-full shrink-0 border border-green-500" style={{ background: "rgba(74,222,128,0.15)" }} />
+              <span className="font-sans text-xs text-stone">High priority target</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="w-2.5 h-2.5 rounded-full shrink-0 border border-yellow-400" style={{ background: "rgba(250,204,21,0.15)" }} />
+              <span className="font-sans text-xs text-stone">Medium priority</span>
+            </div>
+          </>
+        )}
       </div>
 
-      <MapWrapper venues={venuesWithMachines} colourMode={colourMode} />
+      <MapWrapper
+        venues={venuesWithMachines}
+        colourMode={colourMode}
+        expansionTargets={showExpansion ? EXPANSION_TARGETS : []}
+      />
     </div>
   );
 }

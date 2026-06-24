@@ -20,6 +20,17 @@ import type {
   ProfitTimeSeries,
   RestockItem,
   FragranceAnalytic,
+  PartnerContract,
+  InventoryItem,
+  PurchaseOrder,
+  PurchaseOrderStatus,
+  ReconciliationSummary,
+  MachineRoi,
+  ConsoleDocument,
+  DocumentType,
+  AuditEntry,
+  SaleAnomaly,
+  LeagueTableRow,
 } from "./types";
 
 // ─── AdminDataSource interface ────────────────────────────────────────────────
@@ -80,9 +91,46 @@ export interface AdminDataSource {
 
   // ── Restock planner ───────────────────────────────────────────────────────
   getRestockItems(): Promise<RestockItem[]>;
-  /** REAL API LATER: POST /venues/:venueId/restock — resets stock to full capacity */
+  /** REAL API LATER: POST /venues/:venueId/restock */
   markVenueRestocked(venueId: string): Promise<void>;
 
   // ── Fragrance analytics ───────────────────────────────────────────────────
   getFragranceAnalytics(dateRange: DateRange): Promise<FragranceAnalytic[]>;
+
+  // ── Partners / contracts ──────────────────────────────────────────────────
+  getPartnerContracts(): Promise<PartnerContract[]>;
+  /** REAL API LATER: POST /partners/:venueId/notes */
+  addPartnerNote(venueId: string, author: string, body: string): Promise<void>;
+
+  // ── Central inventory ─────────────────────────────────────────────────────
+  getInventory(): Promise<InventoryItem[]>;
+  getPurchaseOrders(): Promise<PurchaseOrder[]>;
+  /** REAL API LATER: POST /purchase-orders */
+  createPurchaseOrder(fragrance: string, qty: number, supplier: string, costPerUnit: number): Promise<PurchaseOrder>;
+  /** REAL API LATER: PATCH /purchase-orders/:id */
+  updatePurchaseOrderStatus(id: string, status: PurchaseOrderStatus): Promise<void>;
+
+  // ── Reconciliation ────────────────────────────────────────────────────────
+  // REAL INTEGRATION LATER: feed from payment processor (Stripe/SumUp/etc.)
+  getReconciliation(dateRange: DateRange): Promise<ReconciliationSummary>;
+
+  // ── Machine ROI ───────────────────────────────────────────────────────────
+  getMachineRoi(): Promise<MachineRoi[]>;
+
+  // ── Documents ─────────────────────────────────────────────────────────────
+  getDocuments(filter?: { venueId?: string; machineId?: string; type?: DocumentType }): Promise<ConsoleDocument[]>;
+  /** REAL API LATER: POST /documents (with file upload to storage) */
+  addDocument(doc: Omit<ConsoleDocument, "id" | "uploadedAt">): Promise<ConsoleDocument>;
+
+  // ── Audit log ─────────────────────────────────────────────────────────────
+  getAuditLog(limit?: number): Promise<AuditEntry[]>;
+  /** Append an entry — called by mutation methods internally in mock; in prod, call real API. */
+  appendAuditEntry(actor: string, action: string, entityType: AuditEntry["entityType"], entityId: string, entityName: string, detail: string): Promise<void>;
+
+  // ── Anomaly detection ─────────────────────────────────────────────────────
+  // REAL INTEGRATION LATER: sharp anomaly detection requires a live sales feed
+  getSaleAnomalies(dateRange: DateRange): Promise<SaleAnomaly[]>;
+
+  // ── League table ──────────────────────────────────────────────────────────
+  getLeagueTable(current: DateRange, previous: DateRange): Promise<LeagueTableRow[]>;
 }
