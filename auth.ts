@@ -3,12 +3,13 @@ import Credentials from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
 import { authConfig } from "./auth.config";
 import { findUserByEmail } from "@/lib/auth/mock-users";
+import type { UserRole } from "@/lib/auth/mock-users";
 
-// Extend the built-in session/JWT types with venueId / venueName
 declare module "next-auth" {
   interface User {
     venueId: string;
     venueName: string;
+    role: UserRole;
   }
   interface Session {
     user: {
@@ -17,10 +18,10 @@ declare module "next-auth" {
       name: string;
       venueId: string;
       venueName: string;
+      role: UserRole;
     };
   }
 }
-
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   ...authConfig,
@@ -48,10 +49,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           name: user.name,
           venueId: user.venueId,
           venueName: user.venueName,
+          role: user.role,
         };
       },
     }),
-    // Add OAuth providers here to enable SSO:
-    // Google({ clientId: process.env.GOOGLE_CLIENT_ID!, clientSecret: process.env.GOOGLE_CLIENT_SECRET! }),
   ],
 });
