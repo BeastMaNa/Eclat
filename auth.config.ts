@@ -27,5 +27,17 @@ export const authConfig = {
       return session;
     },
   },
-  session: { strategy: "jwt" },
+  session: { strategy: "jwt", maxAge: 8 * 60 * 60 }, // 8-hour sessions
+  cookies: {
+    sessionToken: {
+      options: {
+        httpOnly: true,
+        sameSite: "lax",
+        path: "/",
+        // secure:true is enforced by NextAuth automatically when NODE_ENV === "production"
+        // but we set it explicitly to avoid any edge-case misconfiguration.
+        secure: process.env.NODE_ENV === "production",
+      },
+    },
+  },
 } satisfies NextAuthConfig;

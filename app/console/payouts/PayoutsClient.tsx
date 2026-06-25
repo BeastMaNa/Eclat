@@ -7,13 +7,20 @@ import type { PayoutRecord } from "@/lib/admin/types";
 const gbp = (v: number) =>
   new Intl.NumberFormat("en-GB", { style: "currency", currency: "GBP" }).format(v);
 
+// Prevent CSV formula injection: prefix cells that start with formula chars.
+function safeCsvCell(v: string | number): string {
+  const s = String(v).replace(/"/g, '""');
+  // Excel/LibreOffice interpret leading =, +, -, @, tab, CR as formulas
+  return /^[=+\-@\t\r]/.test(s) ? `"'${s}"` : `"${s}"`;
+}
+
 function csvRow(r: PayoutRecord, s: { status: string; paidDate?: string; paidReference?: string }) {
   return [
     r.venueName, r.area, r.partnershipModel,
     r.grossSalesGbp, r.commissionPct,
     r.partnerShareGbp, r.eclatShareGbp,
     s.status, s.paidDate ?? "", s.paidReference ?? "",
-  ].map((v) => `"${String(v).replace(/"/g, '""')}"`).join(",");
+  ].map(safeCsvCell).join(",");
 }
 
 function downloadCSV(records: PayoutRecord[], overrides: Map<string, { paidDate: string; paidReference: string }>, rangeLabel: string) {

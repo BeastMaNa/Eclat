@@ -8,7 +8,10 @@ import { AlertCircle, Loader2 } from "lucide-react";
 export function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const callbackUrl = searchParams.get("callbackUrl") ?? "/dashboard";
+  // Only accept relative same-origin paths; reject external URLs and
+  // protocol-relative //evil.com strings to prevent open-redirect attacks.
+  const rawCallback = searchParams.get("callbackUrl") ?? "";
+  const callbackUrl = /^\/(?!\/)/.test(rawCallback) ? rawCallback : "/dashboard";
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");

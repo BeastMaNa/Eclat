@@ -51,7 +51,7 @@ export const MOCK_USERS: VenueUser[] = [
   {
     id: "user-owner-001",
     email: "team@eclat.co.uk",
-    // Password: eclat-admin!  (change before real deployment)
+    // bcrypt hash — rotate this credential before going live
     passwordHash: "$2b$10$yHfBFk9INWDnhvBqInlJLeOVz6yDkEJv311OCthOjIkyMve9jcV.a",
     name: "Éclat Team",
     venueId: "",

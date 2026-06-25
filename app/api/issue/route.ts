@@ -2,6 +2,15 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { z } from "zod";
 
+function escHtml(s: string): string {
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#x27;");
+}
+
 const bodySchema = z.object({
   category: z.string().min(1),
   description: z.string().min(5, "Please describe the issue"),
@@ -33,11 +42,11 @@ export async function POST(request: NextRequest) {
   const html = `
     <h2 style="font-family:Georgia,serif;color:#14110F;">Issue report from partner dashboard</h2>
     <table style="font-family:system-ui,sans-serif;font-size:14px;border-collapse:collapse;">
-      <tr><td style="padding:6px 16px 6px 0;color:#8B8378;width:120px;">Venue</td><td style="padding:6px 0;color:#14110F;">${venueName} (${venueId})</td></tr>
-      <tr><td style="padding:6px 16px 6px 0;color:#8B8378;">Email</td><td style="padding:6px 0;color:#14110F;"><a href="mailto:${email}">${email}</a></td></tr>
-      <tr><td style="padding:6px 16px 6px 0;color:#8B8378;">Category</td><td style="padding:6px 0;color:#14110F;">${category}</td></tr>
-      <tr><td style="padding:6px 16px 6px 0;color:#8B8378;">Submitted</td><td style="padding:6px 0;color:#14110F;">${timestamp}</td></tr>
-      <tr><td style="padding:6px 16px 6px 0;color:#8B8378;vertical-align:top;">Description</td><td style="padding:6px 0;color:#14110F;">${description.replace(/\n/g, "<br>")}</td></tr>
+      <tr><td style="padding:6px 16px 6px 0;color:#8B8378;width:120px;">Venue</td><td style="padding:6px 0;color:#14110F;">${escHtml(venueName)} (${escHtml(venueId)})</td></tr>
+      <tr><td style="padding:6px 16px 6px 0;color:#8B8378;">Email</td><td style="padding:6px 0;color:#14110F;"><a href="mailto:${escHtml(email)}">${escHtml(email)}</a></td></tr>
+      <tr><td style="padding:6px 16px 6px 0;color:#8B8378;">Category</td><td style="padding:6px 0;color:#14110F;">${escHtml(category)}</td></tr>
+      <tr><td style="padding:6px 16px 6px 0;color:#8B8378;">Submitted</td><td style="padding:6px 0;color:#14110F;">${escHtml(timestamp)}</td></tr>
+      <tr><td style="padding:6px 16px 6px 0;color:#8B8378;vertical-align:top;">Description</td><td style="padding:6px 0;color:#14110F;">${escHtml(description).replace(/\n/g, "<br>")}</td></tr>
     </table>
   `;
 
