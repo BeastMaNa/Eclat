@@ -6,7 +6,7 @@ import {
   LayoutDashboard, Map, Building2, TrendingUp,
   MessageSquare, Wrench, Package, LogOut, Menu, X,
   Banknote, BarChart2, Droplets,
-  Users, Archive, CreditCard, PieChart, FileText, ClipboardList,
+  Users, Archive, CreditCard, PieChart, FileText, ClipboardList, CalendarDays,
 } from "lucide-react";
 import { signOut } from "next-auth/react";
 import { cn } from "@/lib/utils";
@@ -54,6 +54,7 @@ const NAV_SECTIONS: { heading: string; items: NavItem[] }[] = [
     heading: "Operations",
     items: [
       { href: "/console/maintenance",   label: "Maintenance",   icon: Wrench,          exact: false },
+      { href: "/console/calendar",      label: "Calendar",      icon: CalendarDays,    exact: false },
       { href: "/console/audit",         label: "Audit Log",     icon: ClipboardList,   exact: false },
     ],
   },
