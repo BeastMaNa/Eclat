@@ -4,6 +4,7 @@ import { getAdminDataSource } from "@/lib/admin";
 import Link from "next/link";
 import { MapWrapper } from "./MapWrapper";
 import { EXPANSION_TARGETS } from "@/lib/admin/expansion-targets";
+import { ConsoleHeader } from "../_components/ConsoleHeader";
 
 interface Props { searchParams: Promise<{ mode?: string; days?: string; expansion?: string }> }
 
@@ -34,53 +35,55 @@ export default async function MapPage({ searchParams }: Props) {
     revenueGbp: revenueMap[v.id] ?? 0,
   }));
 
-  return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between flex-wrap gap-3">
-        <h1 className="font-serif text-xl font-bold text-ink">Map</h1>
-        <div className="flex gap-2 flex-wrap">
-          <div className="flex gap-1.5">
-            {["status", "performance"].map((m) => (
-              <Link
-                key={m}
-                href={`/console/map?mode=${m}&days=${days}${showExpansion ? "&expansion=1" : ""}`}
-                className={`px-3 py-1.5 rounded-full font-sans text-xs font-semibold border transition-colors ${
-                  colourMode === m
-                    ? "bg-accent/15 border-accent/30 text-ink"
-                    : "border-stone/20 text-stone hover:text-ink"
-                }`}
-              >
-                {m.charAt(0).toUpperCase() + m.slice(1)}
-              </Link>
-            ))}
-          </div>
+  const mapActions = (
+    <div className="flex gap-2 flex-wrap justify-end">
+      <div className="flex gap-1.5">
+        {["status", "performance"].map((m) => (
           <Link
-            href={`/console/map?mode=${colourMode}&days=${days}&expansion=${showExpansion ? "0" : "1"}`}
+            key={m}
+            href={`/console/map?mode=${m}&days=${days}${showExpansion ? "&expansion=1" : ""}`}
             className={`px-3 py-1.5 rounded-full font-sans text-xs font-semibold border transition-colors ${
-              showExpansion
-                ? "bg-green-50 border-green-300 text-green-700"
+              colourMode === m
+                ? "bg-accent/15 border-accent/30 text-ink"
                 : "border-stone/20 text-stone hover:text-ink"
             }`}
           >
-            Expansion targets
+            {m.charAt(0).toUpperCase() + m.slice(1)}
           </Link>
-          <div className="flex gap-1.5">
-            {[7, 30, 90].map((d) => (
-              <Link
-                key={d}
-                href={`/console/map?mode=${colourMode}&days=${d}${showExpansion ? "&expansion=1" : ""}`}
-                className={`px-3 py-1.5 rounded-full font-sans text-xs font-semibold border transition-colors ${
-                  days === d
-                    ? "bg-accent/15 border-accent/30 text-ink"
-                    : "border-stone/20 text-stone hover:text-ink"
-                }`}
-              >
-                {d}d
-              </Link>
-            ))}
-          </div>
-        </div>
+        ))}
       </div>
+      <Link
+        href={`/console/map?mode=${colourMode}&days=${days}&expansion=${showExpansion ? "0" : "1"}`}
+        className={`px-3 py-1.5 rounded-full font-sans text-xs font-semibold border transition-colors ${
+          showExpansion
+            ? "bg-green-50 border-green-300 text-green-700"
+            : "border-stone/20 text-stone hover:text-ink"
+        }`}
+      >
+        Expansion targets
+      </Link>
+      <div className="flex gap-1.5">
+        {[7, 30, 90].map((d) => (
+          <Link
+            key={d}
+            href={`/console/map?mode=${colourMode}&days=${d}${showExpansion ? "&expansion=1" : ""}`}
+            className={`px-3 py-1.5 rounded-full font-sans text-xs font-semibold border transition-colors ${
+              days === d
+                ? "bg-accent/15 border-accent/30 text-ink"
+                : "border-stone/20 text-stone hover:text-ink"
+            }`}
+          >
+            {d}d
+          </Link>
+        ))}
+      </div>
+    </div>
+  );
+
+  return (
+    <>
+      <ConsoleHeader title="Map" actions={mapActions} />
+      <div className="p-4 pb-6 lg:p-6 space-y-4">
 
       <div className="flex gap-4 flex-wrap">
         {(colourMode === "status"
@@ -111,6 +114,7 @@ export default async function MapPage({ searchParams }: Props) {
         colourMode={colourMode}
         expansionTargets={showExpansion ? EXPANSION_TARGETS : []}
       />
-    </div>
+      </div>
+    </>
   );
 }

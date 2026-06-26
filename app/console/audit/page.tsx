@@ -1,6 +1,7 @@
 import { getAdminDataSource } from "@/lib/admin";
 import { ClipboardList } from "lucide-react";
 import type { AuditEntry } from "@/lib/admin/types";
+import { ConsoleHeader } from "../_components/ConsoleHeader";
 
 export const dynamic = "force-dynamic";
 
@@ -33,13 +34,12 @@ export default async function AuditPage() {
   const log = await ds.getAuditLog(200);
 
   return (
-    <div className="space-y-5">
-      <div>
-        <h1 className="font-serif text-xl font-bold text-ink">Audit Log</h1>
-        <p className="font-sans text-xs text-stone mt-0.5">
-          Append-only record of owner actions this session. Persists for the lifetime of the server process.
-        </p>
-      </div>
+    <>
+      <ConsoleHeader
+        title="Audit Log"
+        subtitle="Append-only record of owner actions this session"
+      />
+      <div className="p-4 pb-6 lg:p-6 space-y-5">
 
       {log.length === 0 ? (
         <div className="bg-white border border-stone/10 rounded-xl py-16 text-center">
@@ -87,6 +87,7 @@ export default async function AuditPage() {
       <p className="font-sans text-[10px] text-stone italic">
         [PLACEHOLDER — Real audit log: persist to database on every mutation. Currently in-memory only.]
       </p>
-    </div>
+      </div>
+    </>
   );
 }

@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { Users, Clock, AlertTriangle, ChevronDown, ChevronUp, Plus, Send } from "lucide-react";
 import type { PartnerContract, ContractStatus } from "@/lib/admin/types";
+import { ConsoleHeader } from "@/app/console/_components/ConsoleHeader";
 
 const STATUS_CONFIG: Record<ContractStatus, { label: string; cls: string }> = {
   active:          { label: "Active",          cls: "bg-green-50 text-green-700 border-green-200" },
@@ -60,11 +61,12 @@ export function PartnersClient({ contracts }: Props) {
   }
 
   return (
-    <div className="space-y-5">
-      <div className="flex items-center justify-between flex-wrap gap-3">
-        <h1 className="font-serif text-xl font-bold text-ink">Partners</h1>
-        <p className="font-sans text-xs text-stone">{contracts.length} partner venues</p>
-      </div>
+    <>
+      <ConsoleHeader
+        title="Partners"
+        subtitle={`${contracts.length} partner venue${contracts.length !== 1 ? "s" : ""}`}
+      />
+      <div className="p-4 pb-6 lg:p-6 space-y-5">
 
       {/* Status summary */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -218,6 +220,7 @@ export function PartnersClient({ contracts }: Props) {
         Contract end dates are derived from go-live date + model term. Update in the data layer once real contract dates are confirmed.{" "}
         <span className="italic">[PLACEHOLDER — Real contract management: connect to DocuSign or Notion database]</span>
       </p>
-    </div>
+      </div>
+    </>
   );
 }

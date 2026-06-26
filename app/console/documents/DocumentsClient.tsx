@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { FileText, Plus, ExternalLink, Trash2 } from "lucide-react";
 import type { ConsoleDocument, DocumentType } from "@/lib/admin/types";
+import { ConsoleHeader } from "@/app/console/_components/ConsoleHeader";
 import { ConfirmDialog } from "@/app/console/_components/ConfirmDialog";
 import { ToastList } from "@/app/console/_components/ToastList";
 import { useToast } from "@/app/console/_components/useToast";
@@ -71,23 +72,21 @@ export function DocumentsClient({ documents: initialDocs }: Props) {
   }
 
   return (
-    <div className="space-y-5">
+    <>
+      <ConsoleHeader
+        title="Documents"
+        subtitle="Metadata store — links and notes only"
+        actions={
+          <button
+            onClick={() => setShowForm((v) => !v)}
+            className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-accent/15 text-accent font-sans text-xs font-semibold hover:bg-accent/25 transition-colors"
+          >
+            <Plus size={13} /> Add document
+          </button>
+        }
+      />
+      <div className="p-4 pb-6 lg:p-6 space-y-5">
       <ToastList toasts={toasts} onRemove={removeToast} />
-      <div className="flex items-center justify-between flex-wrap gap-3">
-        <div>
-          <h1 className="font-serif text-xl font-bold text-ink">Documents</h1>
-          <p className="font-sans text-xs text-stone mt-0.5">
-            Metadata store — links and notes only.{" "}
-            <span className="italic text-stone/60">[PLACEHOLDER — Actual file upload: connect Vercel Blob / S3]</span>
-          </p>
-        </div>
-        <button
-          onClick={() => setShowForm((v) => !v)}
-          className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-accent/15 text-accent font-sans text-xs font-semibold hover:bg-accent/25 transition-colors"
-        >
-          <Plus size={13} /> Add document
-        </button>
-      </div>
 
       {saved && (
         <div className="bg-green-50 border border-green-200 rounded-xl px-4 py-2">
@@ -247,6 +246,7 @@ export function DocumentsClient({ documents: initialDocs }: Props) {
           isPending={deleting}
         />
       )}
-    </div>
+      </div>
+    </>
   );
 }

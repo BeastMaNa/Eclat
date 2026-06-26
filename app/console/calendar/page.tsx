@@ -4,6 +4,7 @@ import { getAdminDataSource } from "@/lib/admin";
 import { getCalendarEvents, ALL_CALENDAR_TYPES } from "@/lib/admin/calendar";
 import type { CalendarEventType } from "@/lib/admin/calendar";
 import { CalendarClient } from "./CalendarClient";
+import { ConsoleHeader } from "../_components/ConsoleHeader";
 
 interface SearchParams {
   view?: string;
@@ -55,22 +56,22 @@ export default async function CalendarPage({
     : ALL_CALENDAR_TYPES;
 
   return (
-    <div className="space-y-5 pb-10">
-      <div>
-        <h1 className="font-serif text-xl font-bold text-ink">Calendar</h1>
-        <p className="font-sans text-xs text-stone mt-0.5">
-          Unified estate timeline — maintenance, inquiries, payouts, contracts &amp; installs
-        </p>
-      </div>
-      <CalendarClient
-        events={events}
-        venues={venues.map((v) => ({ id: v.id, name: v.name }))}
-        initialView={view}
-        initialDate={dateStr}
-        initialTypes={initialTypes}
-        initialVenue={params.venue ?? ""}
-        initialStatus={params.status ?? ""}
+    <>
+      <ConsoleHeader
+        title="Calendar"
+        subtitle="Unified estate timeline — maintenance, inquiries, payouts, contracts & installs"
       />
-    </div>
+      <div className="p-4 pb-6 lg:p-6">
+        <CalendarClient
+          events={events}
+          venues={venues.map((v) => ({ id: v.id, name: v.name }))}
+          initialView={view}
+          initialDate={dateStr}
+          initialTypes={initialTypes}
+          initialVenue={params.venue ?? ""}
+          initialStatus={params.status ?? ""}
+        />
+      </div>
+    </>
   );
 }

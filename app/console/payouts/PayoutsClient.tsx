@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import type { PayoutRecord } from "@/lib/admin/types";
+import { ConsoleHeader } from "@/app/console/_components/ConsoleHeader";
 
 const gbp = (v: number) =>
   new Intl.NumberFormat("en-GB", { style: "currency", currency: "GBP" }).format(v);
@@ -79,17 +80,19 @@ export function PayoutsClient({ records, rangeLabel }: Props) {
   const outstanding = revenueShare.reduce((s, r) => s + r.partnerShareGbp, 0);
 
   return (
-    <div className="space-y-5">
-      {/* Header */}
-      <div className="flex items-center justify-between flex-wrap gap-3">
-        <h1 className="font-serif text-xl font-bold text-ink">Payouts</h1>
-        <button
-          onClick={() => downloadCSV(records, optimistic, rangeLabel)}
-          className="px-3 py-1.5 rounded-full font-sans text-xs font-semibold border border-stone/20 text-stone hover:text-ink transition-colors"
-        >
-          Export CSV
-        </button>
-      </div>
+    <>
+      <ConsoleHeader
+        title="Payouts"
+        actions={
+          <button
+            onClick={() => downloadCSV(records, optimistic, rangeLabel)}
+            className="px-3 py-1.5 rounded-full font-sans text-xs font-semibold border border-stone/20 text-stone hover:text-ink transition-colors"
+          >
+            Export CSV
+          </button>
+        }
+      />
+      <div className="p-4 pb-6 lg:p-6 space-y-5">
 
       {/* Summary band */}
       <div className="grid grid-cols-3 gap-3">
@@ -232,6 +235,7 @@ export function PayoutsClient({ records, rangeLabel }: Props) {
           </table>
         </div>
       </div>
-    </div>
+      </div>
+    </>
   );
 }

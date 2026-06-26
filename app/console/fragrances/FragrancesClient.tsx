@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { AlertTriangle, ChevronDown, ChevronUp } from "lucide-react";
+import { ConsoleHeader } from "@/app/console/_components/ConsoleHeader";
 import type { FragranceAnalytic } from "@/lib/admin/types";
 
 const gbp = (v: number) =>
@@ -64,9 +65,9 @@ export function FragrancesClient({ analytics }: Props) {
   );
 
   return (
-    <div className="space-y-5">
-      {/* Header */}
-      <h1 className="font-serif text-xl font-bold text-ink">Fragrances</h1>
+    <>
+      <ConsoleHeader title="Fragrances" />
+      <div className="p-4 pb-6 lg:p-6 space-y-5">
 
       {/* Summary */}
       <div className="grid grid-cols-3 gap-3">
@@ -221,6 +222,7 @@ export function FragrancesClient({ analytics }: Props) {
           </p>
         </div>
       </div>
-    </div>
+      </div>
+    </>
   );
 }

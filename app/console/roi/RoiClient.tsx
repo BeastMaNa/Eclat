@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { CheckCircle2, AlertTriangle, Clock } from "lucide-react";
 import type { MachineRoi } from "@/lib/admin/types";
+import { ConsoleHeader } from "@/app/console/_components/ConsoleHeader";
 
 const gbp = (v: number) =>
   new Intl.NumberFormat("en-GB", { style: "currency", currency: "GBP", maximumFractionDigits: 0 }).format(v);
@@ -59,11 +60,9 @@ export function RoiClient({ machines }: Props) {
   );
 
   return (
-    <div className="space-y-5">
-      <div>
-        <h1 className="font-serif text-xl font-bold text-ink">Machine ROI</h1>
-        <p className="font-sans text-xs text-stone mt-0.5">Capital cost payback tracking per deployed machine.</p>
-      </div>
+    <>
+      <ConsoleHeader title="Machine ROI" subtitle="Capital cost payback tracking per deployed machine" />
+      <div className="p-4 pb-6 lg:p-6 space-y-5">
 
       {/* Summary */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -186,6 +185,7 @@ export function RoiClient({ machines }: Props) {
         Target payback: 18 months.{" "}
         <span className="italic">[PLACEHOLDER — Update machine purchase/install costs in lib/admin/costs.ts]</span>
       </p>
-    </div>
+      </div>
+    </>
   );
 }

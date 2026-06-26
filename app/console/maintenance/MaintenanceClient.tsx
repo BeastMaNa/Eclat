@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { Clock, AlertTriangle, Plus, Pencil, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { ConsoleHeader } from "@/app/console/_components/ConsoleHeader";
 import type {
   MaintenanceTicket, TicketStatus, Priority, TicketType, TicketInput,
 } from "@/lib/admin/types";
@@ -224,19 +225,20 @@ export function MaintenanceClient({ tickets: initial, venueNames, machineOptions
   }
 
   return (
-    <div className="space-y-3">
+    <>
+      <ConsoleHeader
+        title="Maintenance"
+        actions={
+          <button
+            onClick={() => setAddOpen(true)}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-ink text-bone font-sans text-xs font-semibold hover:bg-ink/80 transition-colors"
+          >
+            <Plus size={13} /> New ticket
+          </button>
+        }
+      />
+      <div className="p-4 pb-6 lg:p-6 space-y-3">
       <ToastList toasts={toasts} onRemove={removeToast} />
-
-      {/* Header */}
-      <div className="flex items-center justify-between flex-wrap gap-3">
-        <h1 className="font-serif text-xl font-bold text-ink">Maintenance</h1>
-        <button
-          onClick={() => setAddOpen(true)}
-          className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-ink text-bone font-sans text-xs font-semibold hover:bg-ink/80 transition-colors"
-        >
-          <Plus size={13} /> New ticket
-        </button>
-      </div>
 
       {/* Filters */}
       <div className="flex gap-2 flex-wrap">
@@ -362,6 +364,7 @@ export function MaintenanceClient({ tickets: initial, venueNames, machineOptions
           isPending={deleting}
         />
       )}
-    </div>
+      </div>
+    </>
   );
 }

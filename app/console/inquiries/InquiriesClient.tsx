@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { X, Check, Plus, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { ConsoleHeader } from "@/app/console/_components/ConsoleHeader";
 import type { Inquiry, InquiryStatus, InquiryInput } from "@/lib/admin/types";
 import { FormModal } from "@/app/console/_components/FormModal";
 import { ConfirmDialog } from "@/app/console/_components/ConfirmDialog";
@@ -159,19 +160,20 @@ export function InquiriesClient({ initialInquiries }: Props) {
   }
 
   return (
-    <div className="space-y-4">
+    <>
+      <ConsoleHeader
+        title="Inquiries"
+        actions={
+          <button
+            onClick={() => setAddOpen(true)}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-ink text-bone font-sans text-xs font-semibold hover:bg-ink/80 transition-colors"
+          >
+            <Plus size={13} /> New inquiry
+          </button>
+        }
+      />
+      <div className="p-4 pb-6 lg:p-6 space-y-4">
       <ToastList toasts={toasts} onRemove={removeToast} />
-
-      {/* Header */}
-      <div className="flex items-center justify-between flex-wrap gap-3">
-        <h1 className="font-serif text-xl font-bold text-ink">Inquiries</h1>
-        <button
-          onClick={() => setAddOpen(true)}
-          className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-ink text-bone font-sans text-xs font-semibold hover:bg-ink/80 transition-colors"
-        >
-          <Plus size={13} /> New inquiry
-        </button>
-      </div>
 
       <div className="flex flex-col lg:flex-row gap-4">
         {/* List */}
@@ -329,6 +331,7 @@ export function InquiriesClient({ initialInquiries }: Props) {
           isPending={deleting}
         />
       )}
-    </div>
+      </div>
+    </>
   );
 }

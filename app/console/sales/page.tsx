@@ -4,6 +4,7 @@ import { getAdminDataSource } from "@/lib/admin";
 import { SalesClient } from "./SalesClient";
 import { parseRange } from "@/lib/admin/date-range";
 import { FRAGRANCES as CATALOG } from "@/content/catalog";
+import { ConsoleHeader } from "../_components/ConsoleHeader";
 
 interface Props { searchParams: Promise<{ from?: string; to?: string; days?: string }> }
 
@@ -23,9 +24,11 @@ export default async function SalesPage({ searchParams }: Props) {
   const fragrances = [...new Set(sales.map((s) => s.fragrance))].sort();
 
   return (
-    <div className="space-y-4">
-      <h1 className="font-serif text-xl font-bold text-ink">Sales</h1>
-      <SalesClient sales={sales} venues={venues} fragrances={fragrances} />
-    </div>
+    <>
+      <ConsoleHeader title="Sales" />
+      <div className="p-4 pb-6 lg:p-6">
+        <SalesClient sales={sales} venues={venues} fragrances={fragrances} />
+      </div>
+    </>
   );
 }

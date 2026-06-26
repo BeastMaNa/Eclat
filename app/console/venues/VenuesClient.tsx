@@ -3,6 +3,7 @@
 import { useState, useTransition, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { ConsoleHeader } from "@/app/console/_components/ConsoleHeader";
 import { Plus, Pencil, Archive, RotateCcw } from "lucide-react";
 import { FormModal } from "@/app/console/_components/FormModal";
 import { ConfirmDialog } from "@/app/console/_components/ConfirmDialog";
@@ -233,19 +234,20 @@ export function VenuesClient({ venues, machineCountMap, revenueMap }: Props) {
   }
 
   return (
-    <div className="space-y-4">
+    <>
+      <ConsoleHeader
+        title="Venues"
+        actions={
+          <button
+            onClick={() => setAddOpen(true)}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-ink text-bone font-sans text-xs font-semibold hover:bg-ink/80 transition-colors"
+          >
+            <Plus size={13} /> Add venue
+          </button>
+        }
+      />
+      <div className="p-4 pb-6 lg:p-6 space-y-4">
       <ToastList toasts={toasts} onRemove={removeToast} />
-
-      {/* Header */}
-      <div className="flex items-center justify-between flex-wrap gap-3">
-        <h1 className="font-serif text-xl font-bold text-ink">Venues</h1>
-        <button
-          onClick={() => setAddOpen(true)}
-          className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-ink text-bone font-sans text-xs font-semibold hover:bg-ink/80 transition-colors"
-        >
-          <Plus size={13} /> Add venue
-        </button>
-      </div>
 
       {/* Filters */}
       <div className="flex gap-2 flex-wrap items-center">
@@ -362,6 +364,7 @@ export function VenuesClient({ venues, machineCountMap, revenueMap }: Props) {
           isPending={acting}
         />
       )}
-    </div>
+      </div>
+    </>
   );
 }

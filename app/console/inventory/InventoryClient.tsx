@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { AlertTriangle, Plus, CheckCircle2, Clock, Send } from "lucide-react";
 import type { InventoryItem, PurchaseOrder } from "@/lib/admin/types";
+import { ConsoleHeader } from "@/app/console/_components/ConsoleHeader";
 
 const gbp = (v: number) =>
   new Intl.NumberFormat("en-GB", { style: "currency", currency: "GBP", maximumFractionDigits: 2 }).format(v);
@@ -64,16 +65,19 @@ export function InventoryClient({ inventory: initialInventory, purchaseOrders: i
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between flex-wrap gap-3">
-        <h1 className="font-serif text-xl font-bold text-ink">Central Inventory</h1>
-        <button
-          onClick={() => setShowCreatePO((v) => !v)}
-          className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-accent/15 text-accent font-sans text-xs font-semibold hover:bg-accent/25 transition-colors"
-        >
-          <Plus size={13} /> New purchase order
-        </button>
-      </div>
+    <>
+      <ConsoleHeader
+        title="Central Inventory"
+        actions={
+          <button
+            onClick={() => setShowCreatePO((v) => !v)}
+            className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-accent/15 text-accent font-sans text-xs font-semibold hover:bg-accent/25 transition-colors"
+          >
+            <Plus size={13} /> New purchase order
+          </button>
+        }
+      />
+      <div className="p-4 pb-6 lg:p-6 space-y-6">
 
       {/* Reorder alert */}
       {needsReorder.length > 0 && (
@@ -294,6 +298,7 @@ export function InventoryClient({ inventory: initialInventory, purchaseOrders: i
           </div>
         )}
       </div>
-    </div>
+      </div>
+    </>
   );
 }

@@ -3,6 +3,7 @@ import { redirect, notFound } from "next/navigation";
 import { getAdminDataSource } from "@/lib/admin";
 import Link from "next/link";
 import type { VenueStatus } from "@/lib/admin/types";
+import { ConsoleHeader } from "../../_components/ConsoleHeader";
 import { EstateChart } from "../../_components/EstateChart";
 import { VenueMachinesClient } from "./VenueMachinesClient";
 
@@ -62,7 +63,9 @@ export default async function VenueDetailPage({ params, searchParams }: Props) {
   const totalRevenue = timeSeries.reduce((s, d) => s + d.revenueGbp, 0);
 
   return (
-    <div className="space-y-5">
+    <>
+      <ConsoleHeader title={venue.name} subtitle={venue.area} />
+      <div className="p-4 pb-6 lg:p-6 space-y-5">
       {/* Breadcrumb */}
       <div className="flex items-center gap-2 font-sans text-xs text-stone">
         <Link href="/console/venues" className="hover:text-accent transition-colors">Venues</Link>
@@ -70,12 +73,11 @@ export default async function VenueDetailPage({ params, searchParams }: Props) {
         <span className="text-ink">{venue.name}</span>
       </div>
 
-      {/* Header */}
+      {/* Venue info card */}
       <div className="bg-white border border-stone/10 rounded-xl p-5">
         <div className="flex items-start justify-between gap-4 flex-wrap mb-4">
           <div>
             <div className="flex items-center gap-2 mb-1">
-              <h1 className="font-serif text-xl font-bold text-ink">{venue.name}</h1>
               <span className={`px-2 py-0.5 rounded-full font-sans text-[10px] font-semibold ${STATUS_STYLES[venue.status]}`}>
                 {venue.status === "install-pending" ? "Pending" : venue.status.charAt(0).toUpperCase() + venue.status.slice(1)}
               </span>
@@ -178,6 +180,7 @@ export default async function VenueDetailPage({ params, searchParams }: Props) {
           })}
         </div>
       </div>
-    </div>
+      </div>
+    </>
   );
 }

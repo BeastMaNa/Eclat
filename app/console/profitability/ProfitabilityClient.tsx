@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { AlertTriangle, TrendingDown } from "lucide-react";
+import { ConsoleHeader } from "@/app/console/_components/ConsoleHeader";
 import { ProfitChart } from "@/app/console/_components/ProfitChart";
 import type { NetProfitSummary, ProfitTimeSeries } from "@/lib/admin/types";
 import { THIN_MARGIN_THRESHOLD_PCT } from "@/lib/admin/costs";
@@ -55,9 +56,9 @@ export function ProfitabilityClient({ rows, timeSeries }: Props) {
   );
 
   return (
-    <div className="space-y-5">
-      {/* Header */}
-      <h1 className="font-serif text-xl font-bold text-ink">Profitability</h1>
+    <>
+      <ConsoleHeader title="Profitability" />
+      <div className="p-4 pb-6 lg:p-6 space-y-5">
 
       {/* KPI band */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -190,6 +191,7 @@ export function ProfitabilityClient({ rows, timeSeries }: Props) {
           </div>
         </div>
       </div>
-    </div>
+      </div>
+    </>
   );
 }

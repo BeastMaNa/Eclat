@@ -2,6 +2,7 @@
 
 import { CheckCircle2, AlertTriangle, MinusCircle } from "lucide-react";
 import type { ReconciliationSummary } from "@/lib/admin/types";
+import { ConsoleHeader } from "@/app/console/_components/ConsoleHeader";
 
 const gbp = (v: number, signed = false) => {
   const s = new Intl.NumberFormat("en-GB", { style: "currency", currency: "GBP", minimumFractionDigits: 2 }).format(Math.abs(v));
@@ -20,14 +21,12 @@ export function ReconciliationClient({ summary }: Props) {
     : 0;
 
   return (
-    <div className="space-y-5">
-      <div>
-        <h1 className="font-serif text-xl font-bold text-ink">Reconciliation</h1>
-        <p className="font-sans text-xs text-stone mt-0.5">
-          Machine revenue vs payment processor settlement.{" "}
-          <span className="italic text-stone/60">[PLACEHOLDER — Connect real processor data: Stripe/SumUp/Adyen]</span>
-        </p>
-      </div>
+    <>
+      <ConsoleHeader
+        title="Reconciliation"
+        subtitle="Machine revenue vs payment processor settlement"
+      />
+      <div className="p-4 pb-6 lg:p-6 space-y-5">
 
       {/* KPI cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -116,6 +115,7 @@ export function ReconciliationClient({ summary }: Props) {
           </table>
         </div>
       </div>
-    </div>
+      </div>
+    </>
   );
 }

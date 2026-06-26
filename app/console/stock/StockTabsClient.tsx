@@ -3,6 +3,7 @@
 import { useState, useTransition, useMemo, useCallback } from "react";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import Link from "next/link";
+import { ConsoleHeader } from "@/app/console/_components/ConsoleHeader";
 import {
   Package, Truck, CheckSquare, Square, AlertTriangle,
   Plus, Pencil, Trash2,
@@ -250,33 +251,34 @@ export function StockTabsClient({ allStock, restockItems, venues, machines, view
   ];
 
   return (
-    <div className="space-y-5">
+    <>
+      <ConsoleHeader
+        title="Stock"
+        actions={view === "stock" ? (
+          <button
+            onClick={() => setAddSlotOpen(true)}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-ink text-bone font-sans text-xs font-semibold hover:bg-ink/80 transition-colors"
+          >
+            <Plus size={13} /> Add slot
+          </button>
+        ) : undefined}
+      />
+      <div className="p-4 pb-6 lg:p-6 space-y-5">
       <ToastList toasts={toasts} onRemove={removeToast} />
 
-      {/* Header */}
-      <div className="flex items-center justify-between flex-wrap gap-3">
-        <h1 className="font-serif text-xl font-bold text-ink">Stock</h1>
+      {/* Stock-level KPI mini-cards */}
+      {view === "stock" && (
         <div className="flex gap-2">
-          {view === "stock" && (
-            <>
-              <div className="bg-white border border-amber-200 rounded-xl px-3 py-2">
-                <p className="font-sans text-[10px] text-stone">Low stock</p>
-                <p className="font-serif text-lg font-bold text-amber-600">{lowItems.length}</p>
-              </div>
-              <div className="bg-white border border-red-200 rounded-xl px-3 py-2">
-                <p className="font-sans text-[10px] text-stone">Empty</p>
-                <p className="font-serif text-lg font-bold text-red-500">{emptyItems.length}</p>
-              </div>
-              <button
-                onClick={() => setAddSlotOpen(true)}
-                className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-ink text-bone font-sans text-xs font-semibold hover:bg-ink/80 transition-colors"
-              >
-                <Plus size={13} /> Add slot
-              </button>
-            </>
-          )}
+          <div className="bg-white border border-amber-200 rounded-xl px-3 py-2">
+            <p className="font-sans text-[10px] text-stone">Low stock</p>
+            <p className="font-serif text-lg font-bold text-amber-600">{lowItems.length}</p>
+          </div>
+          <div className="bg-white border border-red-200 rounded-xl px-3 py-2">
+            <p className="font-sans text-[10px] text-stone">Empty</p>
+            <p className="font-serif text-lg font-bold text-red-500">{emptyItems.length}</p>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Tabs */}
       <div className="flex gap-1 bg-stone/5 rounded-xl p-1 w-fit">
@@ -408,6 +410,7 @@ export function StockTabsClient({ allStock, restockItems, venues, machines, view
           isPending={deleting}
         />
       )}
-    </div>
+      </div>
+    </>
   );
 }
